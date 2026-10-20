@@ -15,7 +15,7 @@ export async function GET(request: Request, { params }: RouteContext<"/api/expor
   if (user instanceof Response) return user;
 
   const search = new URL(request.url).searchParams;
-  const [buffer, name] = await Promise.all([def.build(search), def.fileName(search)]);
+  const [buffer, name] = await Promise.all([def.build(search, user), def.fileName(search)]);
   await audit(db, user.id, clientIp(request.headers), {
     action: "EXPORT",
     entity: kind,

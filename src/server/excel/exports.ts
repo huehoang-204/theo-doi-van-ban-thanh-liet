@@ -9,6 +9,10 @@ import {
   SCHOOL_OWNERSHIP_LABELS,
 } from "@/lib/i18n/enums";
 import type { Action } from "@/lib/permissions";
+import type { CurrentUser } from "@/server/auth/current-user";
+import { listDocumentsFlat } from "@/server/documents/queries";
+import { flattenTree } from "@/lib/party";
+import { URGENCY_LABELS, VALIDITY_LABELS } from "@/lib/schemas/document";
 import { ROLE_LABELS } from "@/lib/permissions";
 import {
   getCurrentSchoolYear,
@@ -28,7 +32,7 @@ import { buildExportWorkbook, type ExportColumn } from "@/server/excel/workbook"
 type ExportDef = {
   permission: Action;
   fileName: (params: URLSearchParams) => Promise<string> | string;
-  build: (params: URLSearchParams) => Promise<Buffer>;
+  build: (params: URLSearchParams, user: CurrentUser) => Promise<Buffer>;
 };
 
 const yesNo = (v: boolean) => (v ? "Có" : "Không");
@@ -137,7 +141,7 @@ export const EXPORTS: Record<string, ExportDef> = {
     permission: "partyOrg.view",
     fileName: () => "To-chuc-dang.xlsx",
     build: define("To chuc dang", () => listPartyOrgsTree(), [
-      { header: "Tên tổ chức", value: (o) => `${"    ".repeat(o.depth)}${o.name}`, width: 40 },
+      { header: "Tên tổ chức", value: (o) => `${"    ".repeat(o.treeDepth)}${o.name}`, width: 40 },
       { header: "Loại", value: (o) => PARTY_ORG_TYPE_LABELS[o.type], width: 18 },
       { header: "Khối", value: (o) => PARTY_BLOCK_LABELS[o.block], width: 18 },
       { header: "Cấp trên trực tiếp", value: (o) => o.parent?.name, width: 30 },
@@ -157,6 +161,45 @@ export const EXPORTS: Record<string, ExportDef> = {
         width: 16,
       },
     ]),
+  },
+  documents: {
+    permission: "document.list",
+    fileName: (p) => (p.get("goc") ? "Cay-van-ban_chuong-trinh.xlsx" : "Cay-van-ban.xlsx"),
+    build: async (p, user) => {
+      const rows = await listDocumentsFlat(user, { rootId: p.get("goc") });
+      // Thứ tự cây (cha trước con, anh em theo thứ tự thủ công); nút mà tổ tiên bị ẩn do phạm vi xem → nổi lên cấp ngoài
+      const ordered = flattenTree(
+        rows,
+        (a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title, "vi"),
+      );
+      return buildExportWorkbook(
+        "Cay van ban",
+        [
+          { header: "Cấp", value: (d) => d.depth, width: 6 },
+          { header: "Loại", value: (d) => d.type.name, width: 14 },
+          { header: "Số, ký hiệu", value: (d) => d.number, width: 18 },
+          {
+            header: "Trích yếu (thụt lề theo cấp)",
+            value: (d) => d.title,
+            width: 70,
+            indent: (d) => d.depth - 1,
+          },
+          {
+            header: "Cơ quan ban hành",
+            value: (d) => d.issuingAgency?.name ?? d.issuingAgencyText,
+            width: 28,
+          },
+          { header: "Ngày ban hành", value: (d) => formatDate(d.issuedDate), width: 14 },
+          { header: "Lĩnh vực", value: (d) => d.field?.name, width: 18 },
+          { header: "Đơn vị chủ trì", value: (d) => d.leadDepartment?.name, width: 28 },
+          { header: "Độ khẩn", value: (d) => URGENCY_LABELS[d.urgency], width: 12 },
+          { header: "Hạn xử lý", value: (d) => formatDate(d.dueDate), width: 12 },
+          { header: "Trạng thái", value: (d) => VALIDITY_LABELS[d.validity], width: 14 },
+          { header: "Số tệp", value: (d) => d._count.attachments, format: "int", width: 8 },
+        ],
+        ordered,
+      );
+    },
   },
   users: {
     permission: "user.manage",

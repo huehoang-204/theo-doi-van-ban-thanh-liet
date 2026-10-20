@@ -75,13 +75,24 @@ describe("số liệu tổ chức đảng cho bảng điều hành", () => {
       orgs.filter((o) => o.active),
       (x, y) => x.id.localeCompare(y.id),
     );
-    expect(flat.map((o) => `${o.depth}:${o.id}`)).toEqual([
+    expect(flat.map((o) => `${o.treeDepth}:${o.id}`)).toEqual([
       "0:root",
       "1:a",
       "1:b",
       "1:bp",
       "2:c1",
       "2:c2",
+    ]);
+  });
+
+  it("không ghi đè trường depth sẵn có của bản ghi (VD văn bản cấp 1–5)", () => {
+    const docs = [
+      { id: "r", parentId: null, depth: 1 },
+      { id: "k", parentId: "r", depth: 2 },
+    ];
+    expect(flattenTree(docs, () => 0).map((d) => [d.id, d.depth, d.treeDepth])).toEqual([
+      ["r", 1, 0],
+      ["k", 2, 1],
     ]);
   });
 });

@@ -88,7 +88,7 @@ export default async function PartyOrgsPage() {
       <PartyOrgsTable
         rows={orgs.map((o) => ({
           id: o.id,
-          depth: o.depth,
+          depth: o.treeDepth,
           name: o.name,
           type: o.type,
           block: o.block,

@@ -12,6 +12,8 @@ export type ExportColumn<T> = {
   width?: number;
   /** "int" → định dạng #.##0 */
   format?: "int" | "decimal" | "date";
+  /** Thụt lề ô theo cấp (cây văn bản xuất Excel — Mục 4.4) */
+  indent?: (row: T) => number;
 };
 
 const BRAND = "FF1E3A8A";
@@ -53,7 +55,17 @@ export async function buildExportWorkbook<T>(
             ? { numFmt: "dd/mm/yyyy" }
             : {},
   }));
-  for (const row of rows) ws.addRow(columns.map((c) => c.value(row) ?? null));
+  for (const row of rows) {
+    const added = ws.addRow(columns.map((c) => c.value(row) ?? null));
+    columns.forEach((c, i) => {
+      if (c.indent)
+        added.getCell(i + 1).alignment = {
+          indent: Math.max(0, c.indent(row)),
+          wrapText: true,
+          vertical: "top",
+        };
+    });
+  }
   if (footer) ws.addRow(footer).font = { bold: true };
   styleHeader(ws.getRow(1));
   ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: columns.length } };

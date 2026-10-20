@@ -29,8 +29,8 @@ type WithAuthOptions<S extends z.ZodType> = {
   /** Quyền theo bảng Mục 12; hàm khi cần xét theo đối tượng (đọc DB trong cùng transaction) */
   permission: Permission<z.output<S>>;
   schema: S;
-  /** Đường dẫn cần làm mới sau khi ghi */
-  revalidate?: string[];
+  /** Đường dẫn cần làm mới sau khi ghi; [đường dẫn, "layout"] để làm mới cả layout và mọi trang con */
+  revalidate?: Array<string | [string, "layout" | "page"]>;
   /** Cho phép tài khoản đang bị bắt đổi mật khẩu (chỉ dùng cho chính thao tác đổi mật khẩu) */
   allowMustChangePassword?: boolean;
 };
@@ -119,7 +119,10 @@ export function withAuth<S extends z.ZodType, T>(
         return result;
       });
 
-      for (const path of options.revalidate ?? []) revalidatePath(path);
+      for (const entry of options.revalidate ?? []) {
+        if (typeof entry === "string") revalidatePath(entry);
+        else revalidatePath(entry[0], entry[1]);
+      }
       return { ok: true, data };
     } catch (error) {
       if (error instanceof AppError) return { ok: false, error: error.toJSON() };

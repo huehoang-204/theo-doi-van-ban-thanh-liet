@@ -72,9 +72,10 @@ export function computePartyStats(orgs: readonly PartyOrgStatInput[]): PartyStat
   };
 }
 
-export type TreeRow<T> = T & { depth: number };
+/** `treeDepth`: độ sâu khi làm phẳng (0 = gốc) — tên riêng để không đè trường `depth` sẵn có (VD văn bản) */
+export type TreeRow<T> = T & { treeDepth: number };
 
-/** Sắp cây thành danh sách phẳng theo thứ tự duyệt sâu (cha trước con), kèm độ sâu */
+/** Sắp cây thành danh sách phẳng theo thứ tự duyệt sâu (cha trước con), kèm độ sâu `treeDepth` */
 export function flattenTree<T extends { id: string; parentId: string | null }>(
   items: readonly T[],
   compare: (a: T, b: T) => number,
@@ -88,7 +89,7 @@ export function flattenTree<T extends { id: string; parentId: string | null }>(
   const out: TreeRow<T>[] = [];
   const visit = (parentId: string | null, depth: number) => {
     for (const item of [...(byParent.get(parentId) ?? [])].sort(compare)) {
-      out.push({ ...item, depth });
+      out.push({ ...item, treeDepth: depth });
       visit(item.id, depth + 1);
     }
   };

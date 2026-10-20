@@ -6,7 +6,6 @@ import bcrypt from "bcryptjs";
 import type { Prisma, PrismaClient, Role, SchoolLevel } from "../src/generated/prisma/client";
 import { vnDateKey } from "../src/lib/format";
 import { BCRYPT_COST } from "../src/lib/password";
-import { buildSearchText } from "../src/lib/text";
 
 const SAMPLE_PASSWORD = "ThanhLiet@2026";
 const TARGET_POPULATION = 92_000;
@@ -449,7 +448,6 @@ async function seedDocuments(db: Db, createdById: string) {
         fieldId: fields.find((f) => f.name === node.field)?.id ?? null,
         leadDepartmentId: departments.find((d) => d.name === node.lead)?.id ?? null,
         tags: node.tags ?? [],
-        searchText: buildSearchText(node.number, node.title, node.tags ?? []),
         isInternalPublic: depth <= 2,
         createdById,
         isSample: true,

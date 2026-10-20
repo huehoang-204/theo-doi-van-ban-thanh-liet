@@ -2,10 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useId } from "react";
-import { Controller, useForm, type Resolver } from "react-hook-form";
+import { Controller, useForm, useWatch, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
 
+import { DateInput } from "@/components/common/DateInput";
 import { FormField } from "@/components/common/FormField";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,13 +33,18 @@ export type FieldConfig = {
     | "date"
     | "password"
     | "email"
-    | "tel";
+    | "tel"
+    | "custom";
   required?: boolean;
   options?: Option[];
   /** Dòng đầu của ô chọn khi không bắt buộc (VD "— Không chọn —") */
   emptyOption?: string;
   placeholder?: string;
   hint?: string;
+  /** Ô tuỳ biến (type "custom") */
+  render?: (props: CustomFieldProps) => React.ReactNode;
+  /** Chỉ hiện ô khi điều kiện đúng (theo giá trị hiện tại của form) */
+  visibleWhen?: (values: FormValues) => boolean;
   /** Chiếm cả 2 cột */
   wide?: boolean;
   disabled?: boolean;
@@ -46,6 +52,16 @@ export type FieldConfig = {
 };
 
 export type FormValues = Record<string, unknown>;
+
+export type CustomFieldProps = {
+  id: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  onBlur: () => void;
+  invalid: boolean;
+  describedBy?: string;
+  labelId: string;
+};
 
 type EntityFormProps<T> = {
   fields: FieldConfig[];
@@ -76,6 +92,7 @@ export function EntityForm<T>({
     mode: "onTouched",
   });
   const { register, control, handleSubmit, setError, formState } = form;
+  const values = useWatch({ control }) as FormValues;
 
   const submit = handleSubmit(async (values) => {
     const result = await action(values);
@@ -95,6 +112,7 @@ export function EntityForm<T>({
     <form onSubmit={submit} noValidate className="flex flex-col gap-5">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {fields.map((field) => {
+          if (field.visibleWhen && !field.visibleWhen(values)) return null;
           const id = `${formId}-${field.name}`;
           const error = formState.errors[field.name]?.message as string | undefined;
           const describedBy = error ? `${id}-error` : undefined;
@@ -194,6 +212,47 @@ export function EntityForm<T>({
                 />
               );
               break;
+            case "date":
+              control_ = (
+                <Controller
+                  control={control}
+                  name={field.name}
+                  render={({ field: f }) => (
+                    <DateInput
+                      id={id}
+                      label={field.label}
+                      value={typeof f.value === "string" ? f.value : ""}
+                      onChange={f.onChange}
+                      onBlur={f.onBlur}
+                      invalid={!!error}
+                      describedBy={describedBy}
+                      disabled={field.disabled}
+                    />
+                  )}
+                />
+              );
+              break;
+            case "custom":
+              control_ = (
+                <Controller
+                  control={control}
+                  name={field.name}
+                  render={({ field: f }) => (
+                    <>
+                      {field.render?.({
+                        id,
+                        value: f.value,
+                        onChange: f.onChange,
+                        onBlur: f.onBlur,
+                        invalid: !!error,
+                        describedBy,
+                        labelId: `${id}-label`,
+                      })}
+                    </>
+                  )}
+                />
+              );
+              break;
             case "color":
               control_ = (
                 <div className="flex items-center gap-3">
@@ -238,7 +297,7 @@ export function EntityForm<T>({
                   inputMode={
                     type === "number" ? "numeric" : type === "decimal" ? "decimal" : undefined
                   }
-                  placeholder={field.placeholder ?? (type === "date" ? "dd/mm/yyyy" : undefined)}
+                  placeholder={field.placeholder}
                   autoComplete={
                     field.autoComplete ?? (type === "password" ? "new-password" : "off")
                   }

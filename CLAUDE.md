@@ -58,6 +58,17 @@ Phiên bản pin chính xác trong `package.json` (`.npmrc` có `save-exact=true
 - **Tổ chức đảng**: quy tắc cấp trên + số liệu tự đếm (đảng viên cộng ở tổ chức lá) ở `src/lib/party.ts`; override thủ công nằm ở `WardProfile.party*Override`.
 - **Seed**: `prisma/seed.ts` = dữ liệu lõi (an toàn production, không ghi đè chỉnh sửa, admin chỉ tạo nếu chưa có — mật khẩu `SEED_ADMIN_PASSWORD` hoặc mặc định); `prisma/seed-sample.ts` = dữ liệu minh hoạ `isSample=true` (bỏ qua bằng `SEED_SAMPLE=0`), xoá bằng `npm run db:clear-sample`.
 - **E2E** chạy trên CSDL riêng `<db>_e2e` + dev server riêng cổng 3251, thư mục build `.next-e2e` (`NEXT_DIST_DIR`); `tests/e2e/global-setup.ts` migrate + seed + đặt lại tài khoản thử (mật khẩu `ThanhLiet@2026`). Không đụng dữ liệu dev. Khi viết test form dùng `getByRole("textbox", { name })` (nhãn có dấu `*`), chờ nút gửi bật lại trước khi điền tiếp (React đặt lại form sau action).
+- **Cây văn bản** (GĐ2):
+  - Logic thuần ở `src/lib/tree.ts` (vị trí nút, kiểm tra tạo/di chuyển, `planMove` tính path/depth/rootId cả cây con, `planReorder`, vùng thả kéo-thả). Ghi DB ở `src/server/actions/documents.ts`: khoá `FOR UPDATE` cả nhánh, áp `planMove` bằng MỘT câu `UPDATE … FROM unnest(...)` trong transaction; con cháu đã xoá mềm đi cùng nhánh.
+  - Xoá mềm cả nhánh dùng chung một `deletedAt` → khôi phục đúng những nút xoá cùng lúc; khôi phục con khi cha còn trong thùng rác bị chặn.
+  - Tìm kiếm: cột `searchText` do **trigger CSDL** tính `lower(unaccent(số + tên loại + trích yếu + tóm tắt + người ký + cơ quan + thẻ))` (migration `document_search_trigger`) — KHÔNG tự gán `searchText` trong code. Truy vấn: mọi từ đều phải có (`LIKE ALL`, từ khoá cũng qua `unaccent`), xếp hạng `word_similarity` (pg_trgm). `src/lib/search.ts` tách từ + thoát ký tự LIKE.
+  - Phạm vi xem: `canViewAllDocuments(user)`; OFFICER/VIEWER qua `documentScope()` — văn bản xem được + tổ tiên (hiện trên cây, đánh dấu `restricted`, không xem chi tiết).
+  - API cây: `GET /api/documents/tree?cha= | mo=<id,…> | tatCa=1 | demNhanh=<id>`, `GET /api/documents/search?q=&linhVuc=&hieuLuc=&mo=1`. Trạng thái cây phía client trong `TreeContext` (layout `/van-ban` giữ nguyên khi chuyển văn bản → không mất nhánh đang mở).
+  - Kéo-thả @dnd-kit: tay nắm ⋮⋮ (PointerSensor, ngưỡng 6px), `DndContext id` cố định (tránh lệch hydration). Thay thế bằng bàn phím: "Chuyển đến…".
+- **Tệp đính kèm**: `POST /api/files` (multipart, mỗi tệp kiểm tra riêng: ≤ `maxUploadMB`, magic bytes `src/lib/file-type.ts`, tên lưu = id, sha256), `GET /api/files/:id` (kiểm tra quyền xem văn bản, ghi nhật ký DOWNLOAD; PDF/ảnh `inline`, `?tai=1` tải về), `DELETE` = xoá mềm. Lưu ở `UPLOAD_DIR` qua `src/server/storage.ts`. Cảnh báo văn bản mật `SecretWarning` ở mọi chỗ tải tệp.
+- **Form**: `EntityForm` có `type: "custom"` (render tuỳ biến), `visibleWhen`, ô `date` dùng `DateInput` (lịch vi, tuần bắt đầu Thứ Hai, nhãn T2…CN). Nội dung tóm tắt: `RichTextEditor` + lọc lại ở server bằng `sanitize-html` (`src/server/sanitize.ts`).
+- **Integration test** (`npm run test:integration`): chạy server action thật trên CSDL `<db>_test` (vitest, mock phiên + `revalidatePath`, alias `server-only`).
+- `flattenTree` (src/lib/party.ts) trả `treeDepth` — không ghi đè `depth` của bản ghi.
 - **Biểu đồ**: màu đường dữ liệu `--chart-1` (#3B5BDB sáng / #5C7CFA tối) đã qua `validate_palette` của skill dataviz; không dùng `#2563EB` (màu trạng thái).
 - **Thanh bên**: cookie `sidebar-collapsed`; < 768px menu hamburger, 768–1279px chỉ biểu tượng, ≥ 1280px đầy đủ.
 - **`AGENTS.md`** do `next dev` tự sinh/ghi lại — giữ trong repo, không sửa tay.
@@ -94,14 +105,15 @@ Phiên bản pin chính xác trong `package.json` (`.npmrc` có `save-exact=true
 │  │  ├─ schemas/         zod dùng chung (common, catalog, user, auth)
 │  │  ├─ excel/           import-specs.ts, parse.ts (thuần)
 │  │  ├─ status.ts        trạng thái theo hạn (Mục 3.3)      — có unit test
-│  │  ├─ tree.ts          path/depth/move/progress roll-up    — có unit test
+│  │  ├─ tree.ts          path/depth/move/reorder/kéo-thả     — có unit test (+ integration)
+│  │  ├─ file-type.ts search.ts
 │  │  ├─ report-periods.ts sinh kỳ báo cáo                     — có unit test
 │  │  └─ text.ts          bỏ dấu tiếng Việt (kể cả đ/Đ) cho searchText
 │  ├─ generated/prisma/   Prisma client (sinh tự động, không commit)
 │  ├─ auth.ts auth.config.ts proxy.ts
 │  ├─ server/ action.ts (withAuth) errors.ts auth/ actions/ (ghi) queries/ (đọc) excel/
 │  └─ worker/index.ts     cron 06:30 + job đêm
-├─ tests/ unit/ e2e/
+├─ tests/ unit/ integration/ e2e/
 ├─ scripts/ dev/local-postgres.sh, backup.sh
 ├─ docs/ cau-hoi-mo.md, khoi-phuc.md, trien-khai.md, huong-dan-su-dung.md
 └─ docker-compose.yml  .env.example  CLAUDE.md
@@ -146,6 +158,7 @@ npm run worker                           # tiến trình cron (từ Giai đoạn
 npm run lint
 npm run typecheck
 npm run test                             # Vitest
+npm run test:integration                 # Vitest trên CSDL thật <db>_test (cây văn bản, tìm kiếm)
 npm run test:e2e                         # Playwright — tự tạo CSDL <db>_e2e, dev server cổng 3251
 npm run format                           # Prettier
 
@@ -165,8 +178,10 @@ curl http://localhost:3250/api/health    # {"status":"ok","db":"ok"}
       _Nghiệm thu_: vai trò khác nhau thấy menu khác nhau; nhập file 60 TDP thành công; báo lỗi đúng dòng khi file sai.
       _Kết quả_: 75 unit test (phân quyền theo từng dòng bảng Mục 12, mật khẩu/khoá, schema, nhập Excel 60 TDP + lỗi theo dòng, cây tổ chức đảng) + 27 e2e (6 vai trò: trang mặc định, menu, nút quản lý, trang/API bị chặn; khoá sau 5 lần sai; bắt đổi mật khẩu; quay lại trang sau đăng nhập; nhập 60 TDP qua giao diện + file lỗi; xuất Excel; form báo lỗi) — chạy 3 lần liên tiếp đều đạt. Đã xem giao diện ở 1920/1366 (A+)/390. Seed mẫu: 7 người dùng, 9 trường, 40 TDP (~92.000 NK), 63 tổ chức đảng, 10 văn bản, 1 yêu cầu báo cáo (kỳ báo cáo sinh ở GĐ3), 25 công việc.
       _Còn lại cho giai đoạn sau_: ô chọn ngày dạng lịch (GĐ2, hiện nhập `dd/mm/yyyy`); bảng điều hành theo vai trò (GĐ4); trang Nhật ký (GĐ5).
-- [ ] **Giai đoạn 2 — Cây văn bản**: `/van-ban` 2 cột; CRUD + xóa mềm/khôi phục; kéo-thả di chuyển/sắp xếp; chặn > 5 cấp; breadcrumb; tìm không dấu; đính kèm + xem PDF; dạng danh sách; xuất Excel cây; unit test `tree.ts`.
+- [x] **Giai đoạn 2 — Cây văn bản** _(xong 20/10/2026)_: `/van-ban` 2 cột; CRUD + xóa mềm/khôi phục; kéo-thả di chuyển/sắp xếp; chặn > 5 cấp; breadcrumb; tìm không dấu; đính kèm + xem PDF; dạng danh sách; xuất Excel cây; unit test `tree.ts`.
       _Nghiệm thu_: cây đủ 5 cấp; nút thêm con ẩn ở cấp 5; kéo nhánh 3 cấp vào nút cấp 3 bị từ chối rõ ràng; "quyet dinh thanh lap" ra "Quyết định thành lập…".
+      _Kết quả_: cả 4 tiêu chí đạt bằng e2e (tạo 5 cấp qua giao diện; "+"/"Văn bản con" ẩn ở cấp 5; kéo bằng chuột bị từ chối với thông báo nêu số cấp; tìm không dấu tô vàng + tự mở nhánh) và integration test trên CSDL thật (DB không đổi khi bị từ chối). Thêm: tải lười theo nhánh, đính kèm + magic bytes + xem PDF, xoá cả nhánh/hoàn tác, dạng danh sách + thùng rác, xuất Excel cây thụt lề, giao diện điện thoại. 118 unit + 13 integration + 36 e2e.
+      _Để giai đoạn sau_: tiến độ cộng dồn & chấm đỏ nhánh quá hạn (cột `progressCache`/`hasOverdueDescendant` đã hiển thị, tính ở GĐ3); form "Yêu cầu báo cáo" và "Giao việc" từ văn bản (GĐ3); chia sẻ văn bản cho VIEWER (bảng `DocumentShare` có sẵn, chưa có giao diện); trang Thùng rác chung + job xoá vĩnh viễn 30 ngày (GĐ5); nhân bản cấu trúc chương trình (GĐ7).
 - [ ] **Giai đoạn 3 — Công việc & Báo cáo**: giao việc, tiến độ, báo hoàn thành/duyệt/trả lại, gia hạn; yêu cầu báo cáo một lần/định kỳ, sinh kỳ, nộp, tự tạo văn bản con; unit test `status.ts`, `report-periods.ts`; "Việc của tôi"; tiến độ cộng dồn; chấm đỏ nhánh quá hạn.
       _Nghiệm thu_: báo cáo tháng ngày 20, 01–12/2026, 3 đơn vị → đúng 36 kỳ; nộp ngày 21 → "Đã nộp trễ".
 - [ ] **Giai đoạn 4 — Bảng điều hành**: `/api/dashboard` 1 lần gọi; 5 khối Mục 7; mọi con số bấm được; chọn năm học; Trình chiếu tự làm mới.

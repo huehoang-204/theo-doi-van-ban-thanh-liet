@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Role } from "@/generated/prisma/enums";
 import {
   can,
+  canViewAllDocuments,
   homePathFor,
   type Action,
   type AuthUser,
@@ -212,5 +213,21 @@ describe("nhiều vai trò & trường hợp biên", () => {
     expect(homePathFor(userOf("VIEWER"))).toBe("/");
     expect(homePathFor(userOf("LEADER"))).toBe("/");
     expect(homePathFor({ id: "x", roles: ["OFFICER", "CLERK"], departmentId: DEPT })).toBe("/");
+  });
+});
+
+describe("phạm vi xem văn bản", () => {
+  it("ADMIN, LEADER, CLERK, PARTY_ADMIN xem tất cả; OFFICER, VIEWER bị lọc", () => {
+    expect(R.map((role) => canViewAllDocuments(userOf(role)))).toEqual([
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+    ]);
+    expect(canViewAllDocuments({ id: "x", roles: ["OFFICER", "CLERK"], departmentId: null })).toBe(
+      true,
+    );
   });
 });

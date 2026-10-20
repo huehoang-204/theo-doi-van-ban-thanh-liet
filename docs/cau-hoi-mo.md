@@ -51,3 +51,15 @@ Cột "Trạng thái": **Mặc định** = đang làm theo phương án tạm; *
 | “Tổng số tổ chức đảng trực thuộc”                                                                                  | Đếm mọi tổ chức trừ Đảng bộ phường (kể cả chi bộ thuộc đảng bộ bộ phận) — liên quan câu 16.1                                                           |
 | Danh mục Loại văn bản, Lĩnh vực, Cơ quan, Khu vực cũ, Đơn vị                                                       | Chỉ ADMIN sửa (Mục 12 “cấu hình”); cơ quan ban hành ngoài danh mục vẫn nhập tự do được ở văn bản (GĐ2)                                                 |
 | PARTY_ADMIN nhập số liệu tổng hợp thủ công                                                                         | Cho phép (Mục 6.4) dù Thông tin phường chỉ ADMIN sửa                                                                                                   |
+
+## E. Ghi nhận khi làm Giai đoạn 2
+
+| Nội dung                                                                                         | Cách xử lý hiện tại                                                                                                                        |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tìm kiếm: "quyet dinh thanh lap" phải ra văn bản có trích yếu "Thành lập…" thuộc loại Quyết định | Tìm theo **từng từ** (mọi từ phải có, không cần liền nhau) trên số ký hiệu + **tên loại** + trích yếu + tóm tắt + người ký + cơ quan + thẻ |
+| Cấp 2–5 "chọn bất kỳ loại" — có gồm cả loại Chương trình không?                                  | Có (chương trình con). Chỉ loại Chương trình mới được đưa lên cấp 1                                                                        |
+| Ngày ban hành bắt buộc cả với chương trình nội bộ (Mục 4.3 đánh dấu bắt buộc)                    | Bắt buộc; form điền sẵn ngày hôm nay                                                                                                       |
+| OFFICER thấy văn bản theo phạm vi, nhưng cây cần đủ đường đi                                     | Tổ tiên của văn bản được xem vẫn hiện trên cây (biểu tượng khoá, không mở được chi tiết)                                                   |
+| Văn bản cấp 1–2 trong dữ liệu mẫu                                                                | Đánh dấu "Công khai nội bộ" để cán bộ thấy khung chương trình                                                                              |
+| Kéo-thả khi đang sắp theo ngày ban hành                                                          | Chỉ cho chuyển sang cha khác; sắp xếp thủ công phải chuyển về "Thứ tự thủ công"                                                            |
+| Thùng rác                                                                                        | Tạm đặt trong "Dạng danh sách › Đã xoá" (khôi phục được); trang Thùng rác chung + xoá vĩnh viễn sau 30 ngày ở GĐ5                          |

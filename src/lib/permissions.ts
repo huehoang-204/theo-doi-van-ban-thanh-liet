@@ -209,6 +209,14 @@ export function can<A extends Action>(
   return conditionalGrant(user, action, resource);
 }
 
+/**
+ * Xem được MỌI văn bản (ADMIN, LEADER, CLERK, PARTY_ADMIN). OFFICER/VIEWER chỉ xem theo phạm vi
+ * (đơn vị chủ trì/phối hợp, việc được giao, công khai nội bộ, được chia sẻ) → cây phải lọc.
+ */
+export function canViewAllDocuments(user: AuthUser): boolean {
+  return hasAnyRole(user, ROLE_GRANTS["document.view"]);
+}
+
 /** Trang mặc định sau đăng nhập: cán bộ (chỉ OFFICER/VIEWER) không xem được bảng đầy đủ → "Việc của tôi" (Mục 5.3) */
 export function homePathFor(user: AuthUser): "/" | "/viec-cua-toi" {
   if (can(user, "dashboard.viewFull")) return "/";

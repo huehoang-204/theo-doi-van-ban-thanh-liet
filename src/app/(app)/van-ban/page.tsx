@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 
-import { PlaceholderPage } from "@/components/common/PlaceholderPage";
+import { DocumentsEmptyState } from "@/components/document-tree/DocumentsEmptyState";
 import { vi } from "@/lib/i18n/vi";
 
 export const metadata: Metadata = { title: vi.nav.documents };
 
-export default function Page() {
-  return <PlaceholderPage title={vi.nav.documents} phase={2} permission="document.list" />;
+/** Cột phải khi chưa chọn văn bản */
+export default function DocumentsPage() {
+  return <DocumentsEmptyState />;
 }

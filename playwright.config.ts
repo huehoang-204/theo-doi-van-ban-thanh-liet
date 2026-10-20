@@ -44,6 +44,11 @@ export default defineConfig({
     url: `${baseURL}/dang-nhap`,
     reuseExistingServer: false,
     timeout: 180_000,
-    env: { DATABASE_URL: e2eDatabaseUrl(), NEXT_DIST_DIR: ".next-e2e", COOKIE_SECURE: "false" },
+    env: {
+      DATABASE_URL: e2eDatabaseUrl(),
+      NEXT_DIST_DIR: ".next-e2e",
+      COOKIE_SECURE: "false",
+      UPLOAD_DIR: "/hdd3/huehp/.local/webtl-uploads-e2e",
+    },
   },
 });

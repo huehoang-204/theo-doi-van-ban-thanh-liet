@@ -18,7 +18,7 @@ export function PageHeader({ title, description, action, breadcrumbExtra }: Page
           <h1 className="text-page-title font-bold text-foreground">{title}</h1>
           {description && <p className="mt-1 text-muted-foreground">{description}</p>}
         </div>
-        {action && <div className="shrink-0">{action}</div>}
+        {action && <div className="max-w-full min-w-0 sm:shrink-0">{action}</div>}
       </div>
     </div>
   );

@@ -20,6 +20,12 @@ export default async function globalSetup() {
 
   const env = { ...process.env, DATABASE_URL: url };
   execSync("npx prisma migrate deploy", { env, stdio: "pipe" });
+  // Dữ liệu mẫu dựng lại mỗi lần chạy → cây văn bản/công việc luôn ở trạng thái biết trước
+  const reset = new Client({ connectionString: url });
+  await reset.connect();
+  await reset.query(`TRUNCATE "DocumentNode", "Task", "ReportRequirement", "Attachment" CASCADE`);
+  await reset.end();
+  execSync("npx tsx prisma/clear-sample.ts", { env, stdio: "pipe" });
   execSync("npx tsx prisma/seed.ts", { env, stdio: "pipe" });
 
   const db = new Client({ connectionString: url });
