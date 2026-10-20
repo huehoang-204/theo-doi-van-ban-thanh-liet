@@ -1,0 +1,8 @@
+node_modules
+.next
+src/generated
+prisma/migrations
+playwright-report
+test-results
+package-lock.json
+he-thong-theo-doi-van-ban-phuong-thanh-liet.md

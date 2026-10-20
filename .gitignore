@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# prisma generated client
+src/generated/
+
+# env
+.env
+.env.*
+!.env.example
+
+# tests
+playwright-report/
+test-results/
+coverage/
+
+# uploads / runtime data
+data/
+uploads/
+
+# misc
+.DS_Store
+*.log

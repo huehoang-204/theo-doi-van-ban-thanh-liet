@@ -1,0 +1,605 @@
+// Mô hình dữ liệu — Mục 10 đặc tả, đã điều chỉnh (xem CLAUDE.md):
+//  - Mọi khoá ngoại đơn đều có @relation (toàn vẹn dữ liệu + include được).
+//  - Trường "chỉ có ngày" dùng @db.Date để tránh lệch 1 ngày giữa giờ VN và UTC.
+//  - Bổ sung: isInternalPublic, DocumentShare, DocumentFollow, khoá tài khoản,
+//    Notification.dedupKey, cờ isSample cho dữ liệu minh hoạ.
+//  - Mảng id (coDepartmentIds, coUserIds, departmentIds) giữ dạng String[] như đặc tả.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ===================== NGƯỜI DÙNG & ĐƠN VỊ =====================
+enum Role {
+  ADMIN
+  LEADER
+  CLERK
+  OFFICER
+  PARTY_ADMIN
+  VIEWER
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  shortName String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         User[]
+  leadDocuments DocumentNode[]
+  leadTasks     Task[]
+  reportPeriods ReportPeriod[]
+}
+
+model User {
+  id                 String      @id @default(cuid())
+  username           String      @unique
+  passwordHash       String
+  fullName           String
+  position           String? // Chức vụ
+  phone              String?
+  email              String?
+  roles              Role[]
+  departmentId       String?
+  department         Department? @relation(fields: [departmentId], references: [id])
+  fontScale          Int         @default(100) // 100, 112, 125
+  active             Boolean     @default(true)
+  mustChangePassword Boolean     @default(true)
+  failedLoginCount   Int         @default(0) // khoá 15 phút sau 5 lần sai (Mục 13.2)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  isSample           Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  // Quan hệ ngược (đặt tên để phân biệt nhiều khoá tới User)
+  createdDocuments       DocumentNode[]      @relation("DocumentCreatedBy")
+  updatedDocuments       DocumentNode[]      @relation("DocumentUpdatedBy")
+  documentShares         DocumentShare[]     @relation("DocumentShareUser")
+  createdDocumentShares  DocumentShare[]     @relation("DocumentShareCreatedBy")
+  documentFollows        DocumentFollow[]
+  uploadedAttachments    Attachment[]
+  assignedTasks          Task[]              @relation("TaskAssigner")
+  leadTasks              Task[]              @relation("TaskLeadUser")
+  taskUpdates            TaskUpdate[]
+  requestedExtensions    TaskExtension[]     @relation("ExtensionRequestedBy")
+  decidedExtensions      TaskExtension[]     @relation("ExtensionDecidedBy")
+  followedRequirements   ReportRequirement[]
+  reportSubmissions      ReportSubmission[]
+  notifications          Notification[]
+  auditLogs              AuditLog[]
+  updatedWardProfiles    WardProfile[]
+  updatedSchools         School[]
+  updatedSchoolYearStats SchoolYearStat[]
+  updatedResidentials    Residential[]
+  updatedPartyOrgs       PartyOrg[]
+}
+
+// ===================== THÔNG TIN PHƯỜNG =====================
+model WardProfile {
+  id                       Int       @id @default(1)
+  name                     String    @default("Phường Thanh Liệt")
+  city                     String    @default("Hà Nội")
+  areaKm2                  Decimal   @db.Decimal(8, 2)
+  population               Int
+  populationIsEstimate     Boolean   @default(true)
+  households               Int?
+  establishedDate          DateTime? @db.Date
+  address                  String?
+  phone                    String?
+  partyOrgCountOverride    Int? // nhập tay khi danh mục chưa đủ
+  partyCellCountOverride   Int?
+  partyMemberCountOverride Int?
+  updatedById              String?
+  updatedBy                User?     @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt                DateTime  @updatedAt
+}
+
+// ===================== DANH MỤC CHUNG =====================
+model DocumentType {
+  id        String  @id @default(cuid())
+  code      String  @unique // CT, NQ, KH, QD, CV, BC...
+  name      String
+  color     String  @default("#1E3A8A")
+  icon      String  @default("file-text")
+  isProgram Boolean @default(false) // loại "Chương trình" dùng cho cấp 1
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  documents DocumentNode[]
+}
+
+model Field {
+  // Lĩnh vực
+  id        String  @id @default(cuid())
+  name      String  @unique
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  documents DocumentNode[]
+}
+
+model IssuingAgency {
+  // Cơ quan ban hành / nơi nhận báo cáo
+  id     String  @id @default(cuid())
+  name   String  @unique
+  level  String? // Phường / Thành phố / Trung ương
+  active Boolean @default(true)
+
+  documents          DocumentNode[]
+  reportRequirements ReportRequirement[]
+}
+
+// ===================== CÂY VĂN BẢN =====================
+enum Urgency {
+  NORMAL
+  URGENT
+  VERY_URGENT
+  FLASH
+}
+
+enum DocValidity {
+  ACTIVE
+  EXPIRED
+  REPLACED
+}
+
+model DocumentNode {
+  id        String         @id @default(cuid())
+  parentId  String?
+  parent    DocumentNode?  @relation("Tree", fields: [parentId], references: [id])
+  children  DocumentNode[] @relation("Tree")
+  rootId    String? // null nếu chính nó là gốc
+  path      String // "/id1/id2/"
+  depth     Int // 1..MAX_TREE_DEPTH
+  sortOrder Int            @default(0)
+
+  typeId            String
+  type              DocumentType   @relation(fields: [typeId], references: [id])
+  number            String? // Số, ký hiệu
+  title             String         @db.VarChar(500) // Trích yếu
+  summary           String? // Nội dung tóm tắt (HTML đã sanitize)
+  issuingAgencyId   String?
+  issuingAgency     IssuingAgency? @relation(fields: [issuingAgencyId], references: [id])
+  issuingAgencyText String?
+  signer            String?
+  issuedDate        DateTime?      @db.Date
+  effectiveDate     DateTime?      @db.Date
+  dueDate           DateTime?      @db.Date
+  fieldId           String?
+  field             Field?         @relation(fields: [fieldId], references: [id])
+  urgency           Urgency        @default(NORMAL)
+  validity          DocValidity    @default(ACTIVE)
+  replacedById      String?
+  replacedBy        DocumentNode?  @relation("ReplacedBy", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces          DocumentNode[] @relation("ReplacedBy")
+  tags              String[]
+  leadDepartmentId  String?
+  leadDepartment    Department?    @relation(fields: [leadDepartmentId], references: [id])
+  coDepartmentIds   String[]
+  isInternalPublic  Boolean        @default(false) // "Công khai nội bộ" — OFFICER xem được (Mục 12)
+
+  progressCache        Int     @default(0) // % cộng dồn, cập nhật khi task/child đổi
+  hasOverdueDescendant Boolean @default(false)
+  searchText           String  @default("") // bỏ dấu + chữ thường của number/title/summary/tags (src/lib/text.ts)
+
+  attachments        Attachment[]
+  tasks              Task[]
+  reportRequirements ReportRequirement[]
+  linkedSubmissions  ReportSubmission[]
+  shares             DocumentShare[]
+  followers          DocumentFollow[]
+
+  isSample    Boolean   @default(false)
+  createdById String
+  createdBy   User      @relation("DocumentCreatedBy", fields: [createdById], references: [id])
+  updatedById String?
+  updatedBy   User?     @relation("DocumentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([parentId])
+  @@index([rootId])
+  @@index([path]) // migration init tạo với text_pattern_ops (LIKE '/a/b/%' dùng được index); Prisma không đọc được opclass btree nên không khai ở đây — tránh drift giả
+  @@index([issuedDate])
+  @@index([deletedAt])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin)
+}
+
+// Chia sẻ văn bản cho người dùng cụ thể (VIEWER "được chia sẻ" — Mục 12)
+model DocumentShare {
+  id          String       @id @default(cuid())
+  documentId  String
+  document    DocumentNode @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User         @relation("DocumentShareUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User         @relation("DocumentShareCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+
+  @@unique([documentId, userId])
+  @@index([userId])
+}
+
+// Người theo dõi chương trình → nhận thông báo "văn bản mới" (Mục 5.4)
+model DocumentFollow {
+  documentId String
+  document   DocumentNode @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
+
+  @@id([documentId, userId])
+  @@index([userId])
+}
+
+model Attachment {
+  id           String            @id @default(cuid())
+  documentId   String?
+  document     DocumentNode?     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  taskUpdateId String?
+  taskUpdate   TaskUpdate?       @relation(fields: [taskUpdateId], references: [id], onDelete: Cascade)
+  submissionId String?
+  submission   ReportSubmission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  fileName     String // tên gốc
+  storageKey   String            @unique // đường dẫn lưu (đặt theo id)
+  mimeType     String
+  sizeBytes    Int
+  checksum     String
+  uploadedById String
+  uploadedBy   User              @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime          @default(now())
+  deletedAt    DateTime?
+
+  @@index([documentId])
+  @@index([taskUpdateId])
+  @@index([submissionId])
+}
+
+// ===================== CÔNG VIỆC =====================
+enum TaskFlow {
+  NEW
+  IN_PROGRESS
+  SUBMITTED
+  DONE
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model Task {
+  id               String          @id @default(cuid())
+  title            String
+  description      String?
+  documentId       String?
+  document         DocumentNode?   @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  assignerId       String
+  assigner         User            @relation("TaskAssigner", fields: [assignerId], references: [id])
+  leadDepartmentId String?
+  leadDepartment   Department?     @relation(fields: [leadDepartmentId], references: [id])
+  leadUserId       String?
+  leadUser         User?           @relation("TaskLeadUser", fields: [leadUserId], references: [id])
+  coDepartmentIds  String[]
+  coUserIds        String[]
+  startDate        DateTime?       @db.Date
+  dueDate          DateTime?       @db.Date
+  priority         Priority        @default(NORMAL)
+  flow             TaskFlow        @default(NEW)
+  progress         Int             @default(0)
+  completedAt      DateTime?
+  updates          TaskUpdate[]
+  extensions       TaskExtension[]
+  isSample         Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  deletedAt        DateTime?
+
+  @@index([dueDate])
+  @@index([leadDepartmentId])
+  @@index([leadUserId])
+  @@index([documentId])
+}
+
+model TaskUpdate {
+  id          String       @id @default(cuid())
+  taskId      String
+  task        Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  progress    Int
+  content     String
+  attachments Attachment[]
+  createdAt   DateTime     @default(now())
+
+  @@index([taskId])
+}
+
+enum ExtensionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model TaskExtension {
+  id            String          @id @default(cuid())
+  taskId        String
+  task          Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  requestedById String
+  requestedBy   User            @relation("ExtensionRequestedBy", fields: [requestedById], references: [id])
+  oldDueDate    DateTime        @db.Date
+  newDueDate    DateTime        @db.Date
+  reason        String
+  status        ExtensionStatus @default(PENDING)
+  decidedById   String?
+  decidedBy     User?           @relation("ExtensionDecidedBy", fields: [decidedById], references: [id])
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime        @default(now())
+
+  @@index([taskId])
+}
+
+// ===================== BÁO CÁO =====================
+enum ReportFrequency {
+  ONCE
+  MONTHLY
+  QUARTERLY
+  HALF_YEAR
+  YEARLY
+}
+
+model ReportRequirement {
+  id                String          @id @default(cuid())
+  documentId        String
+  document          DocumentNode    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  name              String
+  frequency         ReportFrequency
+  onceDueDate       DateTime?       @db.Date
+  dueDayOfPeriod    Int? // MONTHLY: ngày trong tháng; QUARTERLY/HALF/YEAR: ngày trong tháng cuối kỳ
+  dueMonthOffset    Int? // hạn rơi vào tháng sau kỳ (VD báo cáo tháng nộp ngày 5 tháng sau → 1)
+  startDate         DateTime        @db.Date
+  endDate           DateTime?       @db.Date
+  recipientAgencyId String?
+  recipientAgency   IssuingAgency?  @relation(fields: [recipientAgencyId], references: [id])
+  departmentIds     String[] // đơn vị phải báo cáo
+  followerUserId    String?
+  followerUser      User?           @relation(fields: [followerUserId], references: [id], onDelete: SetNull)
+  active            Boolean         @default(true)
+  periods           ReportPeriod[]
+  isSample          Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([documentId])
+}
+
+model ReportPeriod {
+  id            String             @id @default(cuid())
+  requirementId String
+  requirement   ReportRequirement  @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  label         String // "Tháng 10/2026", "Quý III/2026", "6 tháng đầu năm 2026", "Năm 2026"
+  periodStart   DateTime           @db.Date
+  periodEnd     DateTime           @db.Date
+  dueDate       DateTime           @db.Date
+  departmentId  String
+  department    Department         @relation(fields: [departmentId], references: [id])
+  submissions   ReportSubmission[]
+
+  @@unique([requirementId, periodStart, departmentId])
+  @@index([dueDate])
+  @@index([departmentId])
+}
+
+model ReportSubmission {
+  id               String        @id @default(cuid())
+  periodId         String
+  period           ReportPeriod  @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  number           String?
+  sentDate         DateTime      @db.Date
+  note             String?
+  submittedById    String
+  submittedBy      User          @relation(fields: [submittedById], references: [id])
+  linkedDocumentId String? // văn bản con tự tạo
+  linkedDocument   DocumentNode? @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
+  attachments      Attachment[]
+  lockedAt         DateTime?
+  createdAt        DateTime      @default(now())
+
+  @@index([periodId])
+}
+
+// ===================== ĐỊA BÀN =====================
+enum SchoolLevel {
+  MAM_NON
+  TIEU_HOC
+  THCS
+  THPT
+  LIEN_CAP
+  GDNN_GDTX
+}
+
+enum SchoolOwnership {
+  CONG_LAP
+  TU_THUC
+  DAN_LAP
+}
+
+model School {
+  id             String           @id @default(cuid())
+  name           String           @unique
+  level          SchoolLevel
+  ownership      SchoolOwnership  @default(CONG_LAP)
+  address        String?
+  phone          String?
+  email          String?
+  principal      String?
+  principalPhone String?
+  lat            Float?
+  lng            Float?
+  active         Boolean          @default(true)
+  stats          SchoolYearStat[]
+  partyOrgs      PartyOrg[]
+  sortOrder      Int              @default(0)
+  isSample       Boolean          @default(false)
+  updatedById    String?
+  updatedBy      User?            @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model SchoolYearStat {
+  id             String   @id @default(cuid())
+  schoolId       String
+  school         School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolYear     String // "2026-2027"
+  staffTotal     Int // tổng CB-GV-NV
+  managers       Int?
+  teachers       Int?
+  employees      Int?
+  classes        Int?
+  students       Int
+  femaleStudents Int?
+  note           String?
+  updatedById    String?
+  updatedBy      User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt      DateTime @updatedAt
+
+  @@unique([schoolId, schoolYear])
+  @@index([schoolYear])
+}
+
+model OldArea {
+  // khu vực trước sáp nhập
+  id           String        @id @default(cuid())
+  name         String        @unique
+  sortOrder    Int           @default(0)
+  residentials Residential[]
+}
+
+model Residential {
+  // Tổ dân phố
+  id              String     @id @default(cuid())
+  name            String     @unique
+  code            Int?
+  oldAreaId       String?
+  oldArea         OldArea?   @relation(fields: [oldAreaId], references: [id])
+  leaderName      String?
+  leaderPhone     String?
+  households      Int?
+  population      Int?
+  partyOrgId      String? // chi bộ phụ trách
+  partyOrg        PartyOrg?  @relation("ResidentialPartyOrg", fields: [partyOrgId], references: [id], onDelete: SetNull)
+  linkedPartyOrgs PartyOrg[] @relation("PartyOrgResidential")
+  note            String?
+  active          Boolean    @default(true)
+  isSample        Boolean    @default(false)
+  updatedById     String?
+  updatedBy       User?      @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+enum PartyOrgType {
+  DANG_BO_PHUONG
+  DANG_BO_BO_PHAN
+  DANG_BO_CO_SO
+  CHI_BO_CO_SO
+  CHI_BO_TRUC_THUOC
+}
+
+enum PartyBlock {
+  KHU_DAN_CU
+  CO_QUAN
+  TRUONG_HOC
+  Y_TE
+  DOANH_NGHIEP
+  CONG_AN
+  QUAN_SU
+  KHAC
+}
+
+model PartyOrg {
+  id                  String        @id @default(cuid())
+  name                String
+  type                PartyOrgType
+  block               PartyBlock    @default(KHU_DAN_CU)
+  parentId            String?
+  parent              PartyOrg?     @relation("PartyTree", fields: [parentId], references: [id])
+  children            PartyOrg[]    @relation("PartyTree")
+  secretary           String?
+  secretaryPhone      String?
+  deputySecretary     String?
+  memberCount         Int           @default(0)
+  officialMembers     Int?
+  probationaryMembers Int?
+  latestRating        String?
+  ratingYear          Int?
+  residentialId       String? // TDP tương ứng (nếu có)
+  residential         Residential?  @relation("PartyOrgResidential", fields: [residentialId], references: [id], onDelete: SetNull)
+  managedResidentials Residential[] @relation("ResidentialPartyOrg")
+  schoolId            String? // trường tương ứng (nếu có)
+  school              School?       @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  sortOrder           Int           @default(0)
+  active              Boolean       @default(true)
+  isSample            Boolean       @default(false)
+  updatedById         String?
+  updatedBy           User?         @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@index([parentId])
+}
+
+// ===================== HỆ THỐNG =====================
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // TASK_ASSIGNED, DUE_SOON, OVERDUE, TASK_SUBMITTED, EXTENSION_REQUEST, NEW_DOCUMENT...
+  title     String
+  link      String
+  dedupKey  String? // VD "OVERDUE:task:<id>:2026-10-20" — chống sinh trùng khi job chạy lại
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, dedupKey])
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String // CREATE, UPDATE, DELETE, MOVE, LOGIN, EXPORT, DOWNLOAD...
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Setting {
+  key   String @id
+  value Json
+}
+
+// Setting mặc định: dueSoonDays=3, maxTreeDepth=5, currentSchoolYear="2026-2027", maxUploadMB=20
