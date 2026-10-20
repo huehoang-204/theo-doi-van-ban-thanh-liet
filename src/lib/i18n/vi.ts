@@ -43,6 +43,27 @@ export const vi = {
     guest: "Chưa đăng nhập",
   },
 
+  auth: {
+    loginTitle: "Đăng nhập hệ thống",
+    username: "Tên đăng nhập",
+    password: "Mật khẩu",
+    login: "Đăng nhập",
+    loggingIn: "Đang đăng nhập…",
+    logout: "Đăng xuất",
+    changePassword: "Đổi mật khẩu",
+    currentPassword: "Mật khẩu hiện tại",
+    newPassword: "Mật khẩu mới",
+    confirmPassword: "Nhập lại mật khẩu mới",
+    passwordRule: "Ít nhất 8 ký tự, có cả chữ và số.",
+    mustChangeNotice:
+      "Đây là lần đăng nhập đầu tiên hoặc mật khẩu vừa được đặt lại. Vui lòng đổi mật khẩu để tiếp tục.",
+    changedPassword: "Đã đổi mật khẩu thành công.",
+    secretWarning: "Không lưu văn bản có độ mật (Mật, Tối mật, Tuyệt mật) trên hệ thống này.",
+    forbiddenTitle: "Không có quyền truy cập",
+    forbiddenBody:
+      "Tài khoản của bạn không được phép xem trang này. Nếu cần, hãy liên hệ quản trị viên.",
+  },
+
   fontSize: {
     group: "Cỡ chữ",
     decrease: "Giảm cỡ chữ",

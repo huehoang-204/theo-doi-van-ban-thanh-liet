@@ -1,16 +1,23 @@
-import { Bell, CircleUserRound, Search } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import Link from "next/link";
 
 import { FontSizeToggle } from "@/components/layout/FontSizeToggle";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { UserMenu } from "@/components/layout/UserMenu";
 import { Button } from "@/components/ui/button";
 import type { FontScale } from "@/lib/font-scale";
 import { vi } from "@/lib/i18n/vi";
 
-export function Header({ fontScale }: { fontScale: FontScale }) {
+type HeaderProps = {
+  fontScale: FontScale;
+  allowed: readonly string[];
+  user: { fullName: string; roleLabels: string[]; departmentName: string | null };
+};
+
+export function Header({ fontScale, allowed, user }: HeaderProps) {
   return (
     <header className="no-print sticky top-0 z-40 flex h-16 items-center gap-2 bg-brand px-3 text-brand-foreground shadow-sm md:px-4">
-      <MobileNav />
+      <MobileNav allowed={allowed} />
 
       <Link
         href="/"
@@ -63,16 +70,7 @@ export function Header({ fontScale }: { fontScale: FontScale }) {
         <Bell className="size-5" aria-hidden />
       </Button>
 
-      <Button
-        type="button"
-        variant="ghost"
-        disabled
-        className="h-11 gap-2 px-2 text-base text-white hover:bg-white/15 hover:text-white disabled:opacity-70"
-        aria-label={vi.layout.account}
-      >
-        <CircleUserRound className="size-6" aria-hidden />
-        <span className="hidden xl:inline">{vi.layout.guest}</span>
-      </Button>
+      <UserMenu {...user} />
     </header>
   );
 }

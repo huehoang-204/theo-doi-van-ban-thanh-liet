@@ -1,14 +1,17 @@
 import { expect, test } from "@playwright/test";
 
+import { login } from "./helpers";
+
 const SCREENSHOT_DIR = "test-results/screens";
 
 async function rootFontSizePx(page: import("@playwright/test").Page): Promise<number> {
   return page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
 }
 
-test.describe("Khung giao diện (Giai đoạn 0)", () => {
-  test.beforeEach(async ({ context }) => {
+test.describe("Khung giao diện", () => {
+  test.beforeEach(async ({ context, page }) => {
     await context.clearCookies();
+    await login(page, "chutich");
   });
 
   test("trang chủ có header, menu tiếng Việt và breadcrumb", async ({
@@ -55,7 +58,10 @@ test.describe("Khung giao diện (Giai đoạn 0)", () => {
 
   test("nút A+ tăng cỡ chữ và được nhớ sau khi tải lại", async ({ page }, testInfo) => {
     await page.goto("/");
-    expect(await rootFontSizePx(page)).toBeCloseTo(16, 0);
+    // Cỡ chữ lưu theo tài khoản (test khác có thể đã đổi) → đưa về mức nhỏ nhất trước
+    const decrease = page.getByRole("button", { name: "Giảm cỡ chữ" });
+    while (await decrease.isEnabled()) await decrease.click();
+    await expect.poll(() => rootFontSizePx(page)).toBeCloseTo(16, 0);
 
     const increase = page.getByRole("button", { name: "Tăng cỡ chữ" });
     await increase.click();

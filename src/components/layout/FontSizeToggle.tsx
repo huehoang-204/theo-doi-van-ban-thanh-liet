@@ -10,6 +10,7 @@ import {
   type FontScale,
 } from "@/lib/font-scale";
 import { vi } from "@/lib/i18n/vi";
+import { saveFontScale } from "@/server/actions/auth";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
@@ -22,6 +23,8 @@ export function FontSizeToggle({ initialScale }: { initialScale: FontScale }) {
     setScale(next);
     document.documentElement.style.setProperty("--font-scale", fontScaleCssValue(next));
     document.cookie = `${FONT_SCALE_COOKIE}=${next}; path=/; max-age=${ONE_YEAR_SECONDS}; samesite=lax`;
+    // Lưu theo tài khoản để áp dụng trên máy khác (lỗi mạng không ảnh hưởng hiển thị hiện tại)
+    void saveFontScale(next).catch(() => undefined);
   }
 
   return (

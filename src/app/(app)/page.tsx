@@ -6,5 +6,5 @@ import { vi } from "@/lib/i18n/vi";
 export const metadata: Metadata = { title: vi.nav.dashboard };
 
 export default function Page() {
-  return <PlaceholderPage title={vi.nav.dashboard} phase={4} />;
+  return <PlaceholderPage title={vi.nav.dashboard} phase={4} permission="dashboard.viewReduced" />;
 }

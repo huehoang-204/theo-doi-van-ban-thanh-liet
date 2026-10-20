@@ -18,7 +18,13 @@ const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
  *  - 768–1279px: luôn thu gọn (chỉ biểu tượng)
  *  - ≥ 1280px: đầy đủ, người dùng thu gọn được (nhớ bằng cookie)
  */
-export function Sidebar({ initialCollapsed }: { initialCollapsed: boolean }) {
+export function Sidebar({
+  initialCollapsed,
+  allowed,
+}: {
+  initialCollapsed: boolean;
+  allowed: readonly string[];
+}) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
 
   function toggle() {
@@ -39,10 +45,10 @@ export function Sidebar({ initialCollapsed }: { initialCollapsed: boolean }) {
         <nav className="p-3">
           {/* Màn 768–1279: luôn dạng biểu tượng */}
           <div className="xl:hidden">
-            <NavList compact />
+            <NavList allowed={allowed} compact />
           </div>
           <div className="hidden xl:block">
-            <NavList compact={collapsed} />
+            <NavList allowed={allowed} compact={collapsed} />
           </div>
         </nav>
       </ScrollArea>

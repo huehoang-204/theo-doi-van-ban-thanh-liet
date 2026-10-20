@@ -6,5 +6,5 @@ import { vi } from "@/lib/i18n/vi";
 export const metadata: Metadata = { title: vi.nav.auditLog };
 
 export default function Page() {
-  return <PlaceholderPage title={vi.nav.auditLog} phase={5} />;
+  return <PlaceholderPage title={vi.nav.auditLog} phase={5} permission="auditLog.view" />;
 }

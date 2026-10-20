@@ -39,3 +39,15 @@ Cột "Trạng thái": **Mặc định** = đang làm theo phương án tạm; *
 | D4  | Báo cáo định kỳ tự thêm thành văn bản con → hàng chục nút/năm                                   | Gom dưới một nút "Báo cáo" hoặc thêm tuỳ chọn tắt                               |
 | —   | Báo cáo hằng tháng hạn ngày 29–31 rơi vào tháng thiếu ngày                                      | Lấy ngày cuối tháng                                                             |
 | —   | Danh mục (trường, TDP…) xoá cứng hay mềm?                                                       | Dùng cờ `active` thay cho xoá                                                   |
+
+## D. Ghi nhận khi làm Giai đoạn 1
+
+| Nội dung                                                                                                           | Cách xử lý hiện tại                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Mục 15: TDP “số hộ 250–600, nhân khẩu = hộ × 3–3,6, tổng ≈ 92.000” không thoả đồng thời với 40 TDP (tối đa 86.400) | Seed mẫu ưu tiên tổng ≈ 92.000 và tỉ lệ hộ/nhân khẩu → số hộ mỗi TDP ~560–850                                                                          |
+| Mục 15 không có tài khoản VIEWER mẫu                                                                               | Thêm `totruong1` (VIEWER, Tổ trưởng TDP) để kiểm thử vai trò Chỉ xem                                                                                   |
+| Tên người dùng/trường/tổ chức mẫu                                                                                  | Gắn hậu tố “(mẫu)” để không nhầm với người/đơn vị thật; 3 trường Mầm non/Tiểu học/THCS Thanh Liệt dùng tên thật nhưng số liệu là minh hoạ (`isSample`) |
+| Loại văn bản “Chương trình” và “Chỉ thị” cùng viết tắt CT                                                          | Theo NĐ 30/2020: Chương trình = `CTr`, Chỉ thị = `CT`, Quy định = `QyD`, Tờ trình = `TTr`                                                              |
+| “Tổng số tổ chức đảng trực thuộc”                                                                                  | Đếm mọi tổ chức trừ Đảng bộ phường (kể cả chi bộ thuộc đảng bộ bộ phận) — liên quan câu 16.1                                                           |
+| Danh mục Loại văn bản, Lĩnh vực, Cơ quan, Khu vực cũ, Đơn vị                                                       | Chỉ ADMIN sửa (Mục 12 “cấu hình”); cơ quan ban hành ngoài danh mục vẫn nhập tự do được ở văn bản (GĐ2)                                                 |
+| PARTY_ADMIN nhập số liệu tổng hợp thủ công                                                                         | Cho phép (Mục 6.4) dù Thông tin phường chỉ ADMIN sửa                                                                                                   |

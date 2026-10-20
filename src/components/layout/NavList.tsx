@@ -3,13 +3,15 @@
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { isActivePath, isGroupActive, NAV_ITEMS, type NavItem } from "@/lib/nav";
+import { isActivePath, isGroupActive, visibleNavItems, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 type NavListProps = {
+  /** Đường dẫn menu người dùng được thấy (tính ở server theo quyền) */
+  allowed: readonly string[];
   /** Chỉ hiện biểu tượng (thanh bên thu gọn) */
   compact?: boolean;
   /** Gọi khi chọn một mục (đóng menu mobile) */
@@ -21,12 +23,13 @@ const itemBase =
 const itemIdle = "text-sidebar-foreground hover:bg-slate-100";
 const itemActive = "bg-sidebar-accent text-sidebar-accent-foreground font-semibold";
 
-export function NavList({ compact = false, onNavigate }: NavListProps) {
+export function NavList({ allowed, compact = false, onNavigate }: NavListProps) {
   const pathname = usePathname();
+  const items = useMemo(() => visibleNavItems(allowed), [allowed]);
 
   return (
     <ul className="flex flex-col gap-1">
-      {NAV_ITEMS.map((item) => (
+      {items.map((item) => (
         <li key={item.label}>
           {item.children ? (
             <NavGroup item={item} pathname={pathname} compact={compact} onNavigate={onNavigate} />

@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { vi } from "@/lib/i18n/vi";
 
 /** Menu hamburger cho màn hình < 768px */
-export function MobileNav() {
+export function MobileNav({ allowed }: { allowed: readonly string[] }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -30,7 +30,7 @@ export function MobileNav() {
           <SheetTitle className="text-lg">{vi.app.wardName}</SheetTitle>
         </SheetHeader>
         <nav aria-label={vi.layout.mainMenu} className="overflow-y-auto p-3">
-          <NavList onNavigate={() => setOpen(false)} />
+          <NavList allowed={allowed} onNavigate={() => setOpen(false)} />
         </nav>
       </SheetContent>
     </Sheet>

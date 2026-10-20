@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
 
-import { PlaceholderPage } from "@/components/common/PlaceholderPage";
+import { DepartmentsTable } from "@/components/catalog/DepartmentsTable";
+import { PageHeader } from "@/components/common/PageHeader";
 import { vi } from "@/lib/i18n/vi";
+import { requirePermission } from "@/server/auth/current-user";
+import { listDepartments } from "@/server/queries/catalog";
 
 export const metadata: Metadata = { title: vi.nav.departments };
 
-export default function Page() {
-  return <PlaceholderPage title={vi.nav.departments} phase={1} />;
+export default async function DepartmentsPage() {
+  await requirePermission("department.manage");
+  const departments = await listDepartments();
+  return (
+    <>
+      <PageHeader
+        title={vi.nav.departments}
+        description="Các phòng, ban, đơn vị của phường — mỗi người dùng thuộc một đơn vị."
+      />
+      <DepartmentsTable
+        rows={departments.map(({ _count, ...d }) => ({ ...d, userCount: _count.users }))}
+      />
+    </>
+  );
 }
