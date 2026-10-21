@@ -5,6 +5,9 @@
 //    → đọc theo thành phần UTC, KHÔNG đổi múi giờ (tránh lệch 1 ngày).
 //  - Mốc thời gian (createdAt, completedAt…) hiển thị theo giờ Việt Nam.
 
+import { formatDistanceToNowStrict } from "date-fns";
+import { vi as viLocale } from "date-fns/locale";
+
 import { vi } from "@/lib/i18n/vi";
 
 export const VN_TIME_ZONE = "Asia/Ho_Chi_Minh";
@@ -103,4 +106,11 @@ export function daysUntil(dueDate: Date, now: Date = new Date()): number {
 export function formatRelativeDue(days: number): string {
   if (days === 0) return vi.format.dueToday;
   return days > 0 ? vi.format.daysLeft(days) : vi.format.daysOverdue(-days);
+}
+
+/** "5 phút trước", "2 ngày trước" — dùng cho thông báo */
+export function formatTimeAgo(date: Date | string, now: Date = new Date()): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (now.getTime() - d.getTime() < 60_000) return "vừa xong";
+  return formatDistanceToNowStrict(d, { addSuffix: true, locale: viLocale });
 }

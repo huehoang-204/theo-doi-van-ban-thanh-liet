@@ -90,9 +90,18 @@ type Props = {
   partyOrgs: Option[];
   /** Lọc khu vực cũ từ URL (bảng điều hành) */
   initialArea?: string;
+  /** Từ khoá tìm ban đầu (?tim= từ Ctrl+K) */
+  initialQuery?: string;
 };
 
-export function ResidentialsTable({ rows, canManage, oldAreas, partyOrgs, initialArea }: Props) {
+export function ResidentialsTable({
+  rows,
+  canManage,
+  oldAreas,
+  partyOrgs,
+  initialArea,
+  initialQuery,
+}: Props) {
   const [area, setArea] = useState(initialArea ?? "");
   const shown = useMemo(
     () => (area ? rows.filter((r) => r.oldAreaId === area) : rows),
@@ -118,6 +127,7 @@ export function ResidentialsTable({ rows, canManage, oldAreas, partyOrgs, initia
   return (
     <CrudTable
       entityName="tổ dân phố"
+      initialQuery={initialQuery}
       rows={shown}
       columns={COLUMNS}
       canManage={canManage}

@@ -27,3 +27,29 @@ export function buildSearchText(...parts: Array<string | null | undefined | stri
       .join(" "),
   );
 }
+
+export type HighlightPart = { text: string; hit: boolean };
+
+/**
+ * Tách chuỗi để tô sáng từ khoá, so khớp không dấu: "quyet" tô "Quyết" trong "Quyết định".
+ * Bỏ dấu từng ký tự (NFC tiếng Việt: 1 ký tự có dấu → 1 ký tự không dấu) nên vị trí khớp giữ nguyên.
+ */
+export function highlightParts(text: string, terms: readonly string[]): HighlightPart[] {
+  const source = text.normalize("NFC");
+  const chars = [...source];
+  const folded = chars.map((c) => removeVietnameseTones(c).toLowerCase().charAt(0) || c).join("");
+  const hit = new Array<boolean>(chars.length).fill(false);
+  for (const raw of terms) {
+    const term = normalizeForSearch(raw);
+    if (!term) continue;
+    for (let i = folded.indexOf(term); i >= 0; i = folded.indexOf(term, i + 1))
+      hit.fill(true, i, i + term.length);
+  }
+  const parts: HighlightPart[] = [];
+  chars.forEach((c, i) => {
+    const last = parts.at(-1);
+    if (last && last.hit === hit[i]) last.text += c;
+    else parts.push({ text: c, hit: hit[i]! });
+  });
+  return parts;
+}

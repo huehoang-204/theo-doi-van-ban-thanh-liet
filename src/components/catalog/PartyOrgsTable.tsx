@@ -125,7 +125,7 @@ type Props = {
   residentials: Option[];
   schools: Option[];
   /** Lọc sẵn từ URL (bảng điều hành): loai=chi-bo | <PartyOrgType>, khoi=<PartyBlock> */
-  initial?: { type?: string; block?: string };
+  initial?: { type?: string; block?: string; query?: string };
 };
 
 const CELL_TYPES_SET = new Set(["CHI_BO_CO_SO", "CHI_BO_TRUC_THUOC"]);
@@ -212,6 +212,7 @@ export function PartyOrgsTable({
     <>
       <CrudTable
         entityName="tổ chức đảng"
+        initialQuery={initial?.query}
         rows={shown}
         columns={COLUMNS}
         canManage={canManage}

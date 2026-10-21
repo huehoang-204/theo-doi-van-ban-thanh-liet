@@ -9,6 +9,7 @@ export const vi = {
   },
 
   nav: {
+    notifications: "Thông báo",
     dashboard: "Bảng điều hành",
     myWork: "Việc của tôi",
     documents: "Văn bản",
@@ -37,7 +38,6 @@ export const vi = {
     skipToContent: "Bỏ qua, đến nội dung chính",
     search: "Tìm kiếm…",
     searchShortcut: "Ctrl K",
-    searchComingSoon: "Tìm kiếm toàn cục sẽ có ở Giai đoạn 5",
     notifications: "Thông báo",
     account: "Tài khoản",
     guest: "Chưa đăng nhập",

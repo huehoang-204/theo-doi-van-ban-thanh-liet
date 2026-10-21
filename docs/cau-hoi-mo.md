@@ -89,3 +89,20 @@ Cột "Trạng thái": **Mặc định** = đang làm theo phương án tạm; *
 | VIEWER                                                          | Khối ① đầy đủ + 3 khối lĩnh vực; không có khối ② (công việc nội bộ)                                                                              |
 | "Báo cáo cần nộp trong 14 ngày"                                 | Gồm cả kỳ đã quá hạn chưa nộp (quá hạn lên đầu), hiện 8 dòng + "Xem tất cả" → `/bao-cao?trongNgay=14`                                            |
 | Mốc "Cập nhật ngày …" trên thẻ                                  | Ngày sửa gần nhất của bản ghi nguồn (Thông tin phường / TDP / tổ chức đảng / số liệu năm học)                                                    |
+
+## H. Ghi nhận khi làm Giai đoạn 5
+
+| Nội dung                          | Cách xử lý hiện tại                                                                                                                     |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Ai nhận nhắc hạn công việc        | Người chủ trì; nếu chỉ giao đơn vị thì mọi tài khoản đang hoạt động của đơn vị chủ trì. Người phối hợp không nhận nhắc hạn              |
+| Báo quá hạn cho người giao việc   | Chỉ ngày quá hạn đầu tiên (tránh dồn thông báo cho lãnh đạo); người chủ trì nhận mỗi ngày, tối đa 7 ngày                                |
+| Nhắc kỳ báo cáo                   | Mọi tài khoản của đơn vị phải nộp (3 ngày, 1 ngày, quá hạn ≤ 7 ngày); người theo dõi yêu cầu nhận một lần khi quá hạn                   |
+| Mốc nhắc cố định 3 ngày và 1 ngày | Theo Mục 5.4 — không theo cấu hình "Sắp đến hạn" (`dueSoonDays`). Gia hạn → nhắc lại theo hạn mới                                       |
+| Worker tắt đúng giờ 06:30         | Khởi động lại trong ngày → chạy bù; ngày bị bỏ lỡ hoàn toàn thì mốc "còn 3 ngày" của ngày đó không gửi bù                               |
+| Việc chờ duyệt hoàn thành         | Không nhắc hạn (người làm đã báo hoàn thành)                                                                                            |
+| Job đêm                           | 00:15 giờ VN: tính lại tiến độ & chấm đỏ, xoá vĩnh viễn mục ở Thùng rác quá 30 ngày, xoá thông báo **đã đọc** quá 90 ngày               |
+| Xoá vĩnh viễn văn bản             | Xoá cả nhánh, tệp đính kèm, yêu cầu báo cáo cùng kỳ & bản nộp của nhánh; **công việc giữ lại**, bỏ liên kết văn bản                     |
+| Ai vào Thùng rác (quản trị)       | Chỉ ADMIN (Mục 12). LEADER/CLERK vẫn khôi phục văn bản mình được xoá ở Văn bản › Dạng danh sách › Đã xoá                                |
+| "Chương trình mình theo dõi"      | Nút "Theo dõi chương trình" trên văn bản cấp 1; không tự động theo dõi. Chỉ người có quyền xem văn bản mới được báo                     |
+| Tìm kiếm Ctrl+K                   | 5 nhóm (văn bản, công việc, trường, TDP, tổ chức đảng), 6 kết quả/nhóm, theo phạm vi xem của từng người; VIEWER không có nhóm công việc |
+| Nhật ký                           | Không sửa/xoá được trên giao diện; xuất Excel tối đa 10.000 dòng theo bộ lọc                                                            |

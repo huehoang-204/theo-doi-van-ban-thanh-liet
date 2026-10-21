@@ -23,7 +23,9 @@ export default async function globalSetup() {
   // Dữ liệu mẫu dựng lại mỗi lần chạy → cây văn bản/công việc luôn ở trạng thái biết trước
   const reset = new Client({ connectionString: url });
   await reset.connect();
-  await reset.query(`TRUNCATE "DocumentNode", "Task", "ReportRequirement", "Attachment" CASCADE`);
+  await reset.query(
+    `TRUNCATE "DocumentNode", "Task", "ReportRequirement", "Attachment", "Notification" CASCADE`,
+  );
   await reset.end();
   execSync("npx tsx prisma/clear-sample.ts", { env, stdio: "pipe" });
   execSync("npx tsx prisma/seed.ts", { env, stdio: "pipe" });

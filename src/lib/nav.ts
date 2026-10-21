@@ -123,5 +123,11 @@ export function getNavBreadcrumb(pathname: string): Crumb[] {
       return [{ label: item.label, href: item.href }];
     }
   }
-  return [];
+  const extra = PAGES_OUTSIDE_MENU.find((p) => isActivePath(p.href, pathname));
+  return extra ? [extra] : [];
 }
+
+/** Trang không nằm trên menu nhưng vẫn cần breadcrumb (mở từ header) */
+const PAGES_OUTSIDE_MENU: ReadonlyArray<{ href: Route; label: string }> = [
+  { href: "/thong-bao", label: vi.nav.notifications },
+];

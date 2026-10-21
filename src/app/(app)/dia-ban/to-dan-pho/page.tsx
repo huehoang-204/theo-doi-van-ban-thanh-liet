@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: vi.nav.residentials };
 
 export default async function ResidentialsPage({ searchParams }: PageProps<"/dia-ban/to-dan-pho">) {
   const user = await requirePermission("residential.view");
-  const { khuVuc } = await searchParams;
+  const { khuVuc, tim } = await searchParams;
   const [rows, options] = await Promise.all([listResidentials(), catalogOptions()]);
   return (
     <>
@@ -21,6 +21,7 @@ export default async function ResidentialsPage({ searchParams }: PageProps<"/dia
       />
       <ResidentialsTable
         initialArea={typeof khuVuc === "string" ? khuVuc : undefined}
+        initialQuery={typeof tim === "string" ? tim : undefined}
         rows={rows.map(
           ({
             oldArea,

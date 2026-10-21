@@ -88,7 +88,7 @@ export default async function PartyOrgsPage({ searchParams }: PageProps<"/dia-ba
       )}
 
       <PartyOrgsTable
-        initial={{ type: str(params.loai), block: str(params.khoi) }}
+        initial={{ type: str(params.loai), block: str(params.khoi), query: str(params.tim) }}
         rows={orgs.map((o) => ({
           id: o.id,
           depth: o.treeDepth,

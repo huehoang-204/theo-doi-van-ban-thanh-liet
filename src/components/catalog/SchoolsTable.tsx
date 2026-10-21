@@ -171,6 +171,8 @@ type Props = {
   canManage: boolean;
   /** Lọc cấp học từ URL (bảng điều hành) */
   initialLevel?: string;
+  /** Từ khoá tìm ban đầu (?tim= từ Ctrl+K) */
+  initialQuery?: string;
 };
 
 export function SchoolsTable({
@@ -180,6 +182,7 @@ export function SchoolsTable({
   schoolYears,
   canManage,
   initialLevel,
+  initialQuery,
 }: Props) {
   const router = useRouter();
   const [level, setLevel] = useState(initialLevel ?? "");
@@ -204,6 +207,7 @@ export function SchoolsTable({
     <>
       <CrudTable
         entityName="trường học"
+        initialQuery={initialQuery}
         rows={shown}
         columns={COLUMNS}
         canManage={canManage}

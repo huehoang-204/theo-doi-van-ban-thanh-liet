@@ -30,6 +30,7 @@ export type CrudTableProps<T extends { id: string }> = {
   deleteDescription?: (row: T) => React.ReactNode;
   rowLabel: (row: T) => string;
   searchText?: (row: T) => string;
+  initialQuery?: string;
   exportHref?: string;
   importKind?: ImportKind;
   /** Nút/bộ lọc thêm trên thanh công cụ */

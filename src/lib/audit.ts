@@ -10,6 +10,7 @@ export type AuditEntry = {
     | "DELETE"
     | "MOVE"
     | "RESTORE"
+    | "PURGE"
     | "LOGIN"
     | "LOGIN_FAILED"
     | "LOGOUT"

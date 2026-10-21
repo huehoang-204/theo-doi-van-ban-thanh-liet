@@ -41,6 +41,8 @@ type DataTableProps<T> = {
   /** Chuỗi để tìm không dấu trên mỗi dòng */
   searchText?: (row: T) => string;
   searchPlaceholder?: string;
+  /** Từ khoá tìm ban đầu (VD từ ?tim= khi mở từ tìm kiếm Ctrl+K) */
+  initialQuery?: string;
   /** Bộ lọc & nút bên phải ô tìm kiếm */
   toolbar?: React.ReactNode;
   /** Dòng tổng cuối bảng — một ô cho mỗi cột */
@@ -63,6 +65,7 @@ export function DataTable<T>({
   data,
   searchText,
   searchPlaceholder = "Tìm kiếm…",
+  initialQuery,
   toolbar,
   footer,
   emptyMessage = "Không có dữ liệu.",
@@ -72,7 +75,7 @@ export function DataTable<T>({
   rowClassName,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery ?? "");
   const searchIndex = useMemo(
     () =>
       searchText ? new Map(data.map((row) => [row, normalizeForSearch(searchText(row))])) : null,

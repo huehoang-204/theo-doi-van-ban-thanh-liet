@@ -7,6 +7,7 @@ import { Fragment } from "react";
 import { EmptyState } from "@/components/common/EmptyState";
 import { DocumentActions } from "@/components/document-tree/DocumentActions";
 import { FilesTab } from "@/components/document-tree/FilesTab";
+import { FollowButton } from "@/components/document-tree/FollowButton";
 import {
   AssignTaskButton,
   DocumentReportsTab,
@@ -16,6 +17,7 @@ import { toTaskRow } from "@/server/tasks/rows";
 import { TypeIcon } from "@/components/document-tree/type-icon";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { actionLabel } from "@/lib/audit-labels";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { can } from "@/lib/permissions";
 import { URGENCY_LABELS, VALIDITY_LABELS } from "@/lib/schemas/document";
@@ -28,15 +30,6 @@ import { requirementsOfDocument } from "@/server/reports/queries";
 import { listTasks, userOptions } from "@/server/tasks/queries";
 
 export const metadata: Metadata = { title: "Chi tiết văn bản" };
-
-const ACTION_LABELS: Record<string, string> = {
-  CREATE: "Tạo",
-  UPDATE: "Sửa",
-  MOVE: "Di chuyển",
-  DELETE: "Xoá",
-  RESTORE: "Khôi phục",
-  DOWNLOAD: "Xem/tải tệp",
-};
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -71,7 +64,7 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
   const { doc, ancestors, resource } = result;
   const canAssign = can(user, "task.assign");
   const canRequire = can(user, "report.createRequirement");
-  const [maxDepth, history, departments, tasks, requirements, options, users, agencies] =
+  const [maxDepth, history, departments, tasks, requirements, options, users, agencies, follow] =
     await Promise.all([
       getMaxTreeDepth(),
       documentHistory(doc.id),
@@ -90,6 +83,11 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
             select: { id: true, name: true },
           })
         : [],
+      doc.parentId === null
+        ? db.documentFollow.findUnique({
+            where: { documentId_userId: { documentId: doc.id, userId: user.id } },
+          })
+        : null,
     ]);
   const taskOptions = options && users ? { departments: options.departments, users } : null;
   const docRef = { id: doc.id, label: label(doc) };
@@ -149,6 +147,11 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
           {doc.isInternalPublic && <Badge variant="outline">Công khai nội bộ</Badge>}
           {doc.progressCache !== null && (
             <Badge variant="outline">Tiến độ {doc.progressCache}%</Badge>
+          )}
+          {doc.parentId === null && (
+            <span className="ml-auto">
+              <FollowButton id={doc.id} following={!!follow} />
+            </span>
           )}
         </div>
         <DocumentActions
@@ -348,6 +351,16 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
         </TabsContent>
 
         <TabsContent value="lich-su" className="pt-3">
+          {can(user, "auditLog.view") && (
+            <p className="mb-3">
+              <Link
+                href={`/quan-tri/nhat-ky?doiTuong=DocumentNode&ma=${doc.id}`}
+                className="text-brand underline-offset-4 hover:underline"
+              >
+                Xem đầy đủ trong Nhật ký (kèm nội dung thay đổi)
+              </Link>
+            </p>
+          )}
           {history.length === 0 ? (
             <p className="text-muted-foreground">Chưa có lịch sử.</p>
           ) : (
@@ -359,7 +372,7 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
                   </span>
                   <span className="font-medium">{h.user?.fullName ?? "Hệ thống"}</span>
                   <span>
-                    {ACTION_LABELS[h.action] ?? h.action}
+                    {actionLabel(h.action)}
                     {h.entity === "Attachment" &&
                       ` tệp “${String((h.after as { fileName?: string } | null)?.fileName ?? (h.before as { fileName?: string } | null)?.fileName ?? "")}”`}
                   </span>

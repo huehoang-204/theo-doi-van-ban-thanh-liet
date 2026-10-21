@@ -1,5 +1,4 @@
-import "server-only";
-
+// Không đánh dấu "server-only": worker (job dọn Thùng rác) cũng xoá tệp qua module này.
 import { createReadStream } from "node:fs";
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";

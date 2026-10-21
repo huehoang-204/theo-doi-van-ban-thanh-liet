@@ -69,6 +69,12 @@ describe("bảng phân quyền Mục 12 — quyền không phụ thuộc đối 
     expectRow("catalog.manage", [true, false, false, false, false, false]);
     expectRow("setting.manage", [true, false, false, false, false, false]);
     expectRow("auditLog.view", [true, true, false, false, false, false]);
+    expectRow("trash.manage", [true, false, false, false, false, false]);
+  });
+
+  it("Chuông thông báo và tìm kiếm Ctrl+K: mọi vai trò", () => {
+    expectRow("notification.view", [true, true, true, true, true, true]);
+    expectRow("search.global", [true, true, true, true, true, true]);
   });
 
   it("VIEWER không có Việc của tôi, Công việc, Báo cáo", () => {

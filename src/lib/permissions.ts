@@ -51,7 +51,10 @@ export type Action =
   | "user.manage"
   | "setting.manage"
   | "auditLog.view"
-  | "trash.manage";
+  | "trash.manage"
+  // Chung
+  | "notification.view"
+  | "search.global";
 
 /** Văn bản: các trường cần để xét quyền xem/sửa/xoá */
 export type DocumentResource = {
@@ -130,6 +133,10 @@ const ROLE_GRANTS: Record<Action, readonly Role[]> = {
   "setting.manage": ["ADMIN"],
   "auditLog.view": ["ADMIN", "LEADER"],
   "trash.manage": ["ADMIN"],
+
+  // Chuông thông báo & tìm kiếm Ctrl+K: mọi người (kết quả tìm vẫn lọc theo phạm vi xem)
+  "notification.view": ALL_ROLES,
+  "search.global": ALL_ROLES,
 };
 
 function hasAnyRole(user: AuthUser, roles: readonly Role[]): boolean {

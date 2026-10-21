@@ -5,7 +5,7 @@ import { clientIp } from "@/server/auth/current-user";
 import { EXPORTS, exportFileStamp } from "@/server/excel/exports";
 import { xlsxResponse } from "@/server/excel/workbook";
 
-// GET /api/export/{schools|residentials|party-orgs|users|departments|document-types|fields|issuing-agencies|old-areas}
+// GET /api/export/{audit-log|schools|residentials|party-orgs|users|departments|document-types|fields|issuing-agencies|old-areas}
 export async function GET(request: Request, { params }: RouteContext<"/api/export/[kind]">) {
   const { kind } = await params;
   const def = EXPORTS[kind];

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSearchText, normalizeForSearch, removeVietnameseTones } from "@/lib/text";
+import {
+  buildSearchText,
+  normalizeForSearch,
+  removeVietnameseTones,
+  highlightParts,
+} from "@/lib/text";
 
 describe("bỏ dấu tiếng Việt", () => {
   it("bỏ mọi dấu thanh và dấu mũ", () => {
@@ -31,5 +36,25 @@ describe("chuẩn hoá tìm kiếm", () => {
     expect(buildSearchText("45/KH-UBND", "Chuyển đổi số", null, undefined, ["Đô thị", ""])).toBe(
       "45/kh-ubnd chuyen doi so do thi",
     );
+  });
+});
+
+describe("highlightParts — tô sáng không dấu", () => {
+  it("khớp không dấu, giữ nguyên chữ gốc có dấu", () => {
+    expect(highlightParts("Quyết định thành lập Tổ công tác", ["quyet", "thanh lap"])).toEqual([
+      { text: "Quyết", hit: true },
+      { text: " định ", hit: false },
+      { text: "thành lập", hit: true },
+      { text: " Tổ công tác", hit: false },
+    ]);
+  });
+
+  it("đ/Đ, chữ hoa, nhiều lần xuất hiện; không có từ khoá thì một phần", () => {
+    expect(
+      highlightParts("Đảng bộ – đảng viên", ["dang"])
+        .filter((p) => p.hit)
+        .map((p) => p.text),
+    ).toEqual(["Đảng", "đảng"]);
+    expect(highlightParts("Trường THCS", [])).toEqual([{ text: "Trường THCS", hit: false }]);
   });
 });

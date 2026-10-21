@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Role } from "@/generated/prisma/enums";
+import { actionLabel, auditDetails, auditSubject, entityLabel } from "@/lib/audit-labels";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
   PARTY_BLOCK_LABELS,
@@ -9,6 +10,7 @@ import {
   SCHOOL_OWNERSHIP_LABELS,
 } from "@/lib/i18n/enums";
 import type { Action } from "@/lib/permissions";
+import { auditLogsForExport, parseAuditFilters } from "@/server/audit/queries";
 import type { CurrentUser } from "@/server/auth/current-user";
 import { listDocumentsFlat } from "@/server/documents/queries";
 import { flattenTree } from "@/lib/party";
@@ -58,6 +60,32 @@ const sum = <T>(rows: T[], f: (r: T) => number | null | undefined) =>
   rows.reduce((s, r) => s + (f(r) ?? 0), 0);
 
 export const EXPORTS: Record<string, ExportDef> = {
+  "audit-log": {
+    permission: "auditLog.view",
+    fileName: () => "Nhat-ky.xlsx",
+    build: (p) =>
+      define("Nhat ky", () => auditLogsForExport(parseAuditFilters((k) => p.get(k))), [
+        { header: "Thời gian", value: (r) => formatDateTime(r.createdAt), width: 18 },
+        {
+          header: "Người thực hiện",
+          value: (r) => r.user?.fullName ?? "Hệ thống (tự động)",
+          width: 24,
+        },
+        { header: "Tên đăng nhập", value: (r) => r.user?.username, width: 16 },
+        { header: "Hành động", value: (r) => actionLabel(r.action), width: 18 },
+        { header: "Đối tượng", value: (r) => entityLabel(r.entity), width: 20 },
+        { header: "Tên đối tượng", value: (r) => auditSubject(r.before, r.after), width: 40 },
+        {
+          header: "Chi tiết",
+          value: (r) =>
+            auditDetails(r.before, r.after)
+              .map((d) => `${d.label}: ${d.before !== undefined ? `${d.before} → ` : ""}${d.after}`)
+              .join("\n"),
+          width: 60,
+        },
+        { header: "Địa chỉ IP", value: (r) => r.ip, width: 16 },
+      ])(p),
+  },
   schools: {
     permission: "school.view",
     fileName: async (p) =>

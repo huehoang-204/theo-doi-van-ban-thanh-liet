@@ -23,12 +23,17 @@ import type { CurrentUser } from "@/server/auth/current-user";
 import { recomputeTrees } from "@/server/documents/progress";
 import { documentResourceOf, getMaxTreeDepth } from "@/server/documents/queries";
 import { AppError } from "@/server/errors";
+import { notify } from "@/server/notifications";
 import { sanitizeSummary } from "@/server/sanitize";
 import { z } from "zod";
 
 type Tx = Prisma.TransactionClient;
 
-const REVALIDATE: Array<[string, "layout"]> = [["/van-ban", "layout"]];
+// Thùng rác (quản trị) hiện cùng dữ liệu xoá mềm
+const REVALIDATE: Array<string | [string, "layout"]> = [
+  ["/van-ban", "layout"],
+  "/quan-tri/thung-rac",
+];
 const idOnly = z.object({ id: z.string().min(1) });
 
 const label = (n: { number: string | null; title: string }) =>
@@ -136,7 +141,78 @@ export const createDocument = withAuth(
       },
     });
     audit({ action: "CREATE", entity: "DocumentNode", entityId: id, after: created });
+    if (parent) await notifyProgramFollowers(tx, parent.rootId ?? parent.id, created, user.id);
     return { id, parentId: created.parentId };
+  },
+);
+
+/**
+ * Mục 5.4 "văn bản mới trong chương trình mình theo dõi": báo người theo dõi chương trình gốc
+ * (trừ người vừa tạo), chỉ người được quyền xem văn bản mới.
+ */
+async function notifyProgramFollowers(
+  tx: Prisma.TransactionClient,
+  rootId: string,
+  doc: {
+    id: string;
+    number: string | null;
+    title: string;
+    createdById: string;
+    leadDepartmentId: string | null;
+    coDepartmentIds: string[];
+    isInternalPublic: boolean;
+  },
+  actorId: string,
+) {
+  const follows = await tx.documentFollow.findMany({
+    where: { documentId: rootId, userId: { not: actorId }, user: { active: true } },
+    select: { user: { select: { id: true, roles: true, departmentId: true } } },
+  });
+  if (follows.length === 0) return;
+  const root = await tx.documentNode.findUnique({
+    where: { id: rootId },
+    select: { number: true, title: true },
+  });
+  const resource = documentResourceOf(doc);
+  await notify(
+    tx,
+    follows
+      .map((f) => f.user)
+      .filter((u) => can(u, "document.view", resource))
+      .map((u) => u.id),
+    {
+      kind: "NEW_DOCUMENT",
+      title: `Văn bản mới trong “${root ? label(root) : "chương trình"}”: ${doc.number ? `${doc.number} ` : ""}${doc.title}`,
+      link: `/van-ban/${doc.id}`,
+    },
+  );
+}
+
+/** Theo dõi / bỏ theo dõi một chương trình (văn bản cấp 1) để nhận thông báo văn bản mới */
+export const setProgramFollow = withAuth(
+  {
+    permission: "document.list",
+    schema: z.object({ id: z.string().min(1), follow: z.boolean() }),
+    revalidate: [["/van-ban", "layout"]],
+  },
+  async ({ tx, user, input }) => {
+    const node = await tx.documentNode.findFirst({
+      where: { id: input.id, deletedAt: null },
+      select: { parentId: true },
+    });
+    if (!node) throw new AppError("NOT_FOUND", "Văn bản không tồn tại hoặc đã bị xoá.");
+    if (node.parentId)
+      throw new AppError("NOT_PROGRAM", "Chỉ theo dõi được chương trình (văn bản cấp 1).");
+    if (input.follow) {
+      await tx.documentFollow.upsert({
+        where: { documentId_userId: { documentId: input.id, userId: user.id } },
+        update: {},
+        create: { documentId: input.id, userId: user.id },
+      });
+    } else {
+      await tx.documentFollow.deleteMany({ where: { documentId: input.id, userId: user.id } });
+    }
+    return { following: input.follow };
   },
 );
 
