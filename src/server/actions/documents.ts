@@ -141,18 +141,18 @@ export const createDocument = withAuth(
       },
     });
     audit({ action: "CREATE", entity: "DocumentNode", entityId: id, after: created });
-    if (parent) await notifyProgramFollowers(tx, parent.rootId ?? parent.id, created, user.id);
+    if (parent) await notifyFollowers(tx, parent.path, created, user.id);
     return { id, parentId: created.parentId };
   },
 );
 
 /**
- * Mục 5.4 "văn bản mới trong chương trình mình theo dõi": báo người theo dõi chương trình gốc
- * (trừ người vừa tạo), chỉ người được quyền xem văn bản mới.
+ * Mục 5.4 "văn bản mới trong chương trình mình theo dõi": báo người theo dõi chương trình hoặc bất kỳ văn bản
+ * cấp trên nào của văn bản mới (trừ người vừa tạo), chỉ người được quyền xem văn bản mới.
  */
-async function notifyProgramFollowers(
+async function notifyFollowers(
   tx: Prisma.TransactionClient,
-  rootId: string,
+  parentPath: string,
   doc: {
     id: string;
     number: string | null;
@@ -164,8 +164,11 @@ async function notifyProgramFollowers(
   },
   actorId: string,
 ) {
+  const ancestorIds = parentPath.split("/").filter(Boolean);
+  const rootId = ancestorIds[0]!;
   const follows = await tx.documentFollow.findMany({
-    where: { documentId: rootId, userId: { not: actorId }, user: { active: true } },
+    where: { documentId: { in: ancestorIds }, userId: { not: actorId }, user: { active: true } },
+    distinct: ["userId"],
     select: { user: { select: { id: true, roles: true, departmentId: true } } },
   });
   if (follows.length === 0) return;
@@ -187,34 +190,6 @@ async function notifyProgramFollowers(
     },
   );
 }
-
-/** Theo dõi / bỏ theo dõi một chương trình (văn bản cấp 1) để nhận thông báo văn bản mới */
-export const setProgramFollow = withAuth(
-  {
-    permission: "document.list",
-    schema: z.object({ id: z.string().min(1), follow: z.boolean() }),
-    revalidate: [["/van-ban", "layout"]],
-  },
-  async ({ tx, user, input }) => {
-    const node = await tx.documentNode.findFirst({
-      where: { id: input.id, deletedAt: null },
-      select: { parentId: true },
-    });
-    if (!node) throw new AppError("NOT_FOUND", "Văn bản không tồn tại hoặc đã bị xoá.");
-    if (node.parentId)
-      throw new AppError("NOT_PROGRAM", "Chỉ theo dõi được chương trình (văn bản cấp 1).");
-    if (input.follow) {
-      await tx.documentFollow.upsert({
-        where: { documentId_userId: { documentId: input.id, userId: user.id } },
-        update: {},
-        create: { documentId: input.id, userId: user.id },
-      });
-    } else {
-      await tx.documentFollow.deleteMany({ where: { documentId: input.id, userId: user.id } });
-    }
-    return { following: input.follow };
-  },
-);
 
 // ---------------------------------------------------------------- Sửa
 

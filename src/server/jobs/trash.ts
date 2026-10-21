@@ -49,6 +49,7 @@ export async function purgeDocumentBranches(
       OR: [
         { documentId: { in: docIds } },
         { submission: { period: { requirement: { documentId: { in: docIds } } } } },
+        { comment: { documentId: { in: docIds } } },
       ],
     },
     select: { storageKey: true },

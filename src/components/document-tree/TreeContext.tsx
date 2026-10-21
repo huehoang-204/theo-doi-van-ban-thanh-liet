@@ -114,14 +114,21 @@ export function TreeProvider({
     setChildren((prev) => ({ ...prev, ...Object.fromEntries(groups) }));
   }, []);
 
+  // Số thứ tự yêu cầu theo từng nhánh: phản hồi về muộn của yêu cầu cũ (VD tải lại sau khi xoá, về sau
+  // lần tải lại sau "Hoàn tác") không được ghi đè dữ liệu mới hơn
+  const requestSeq = useRef(new Map<string, number>());
+
   const loadChildren = useCallback(
     async (parentId: string | null) => {
       const k = keyOf(parentId);
+      const seq = (requestSeq.current.get(k) ?? 0) + 1;
+      requestSeq.current.set(k, seq);
       setLoading((s) => new Set(s).add(k));
       try {
         const data = await getJson<{ nodes: TreeNodeDTO[] }>(
           `/api/documents/tree?cha=${encodeURIComponent(parentId ?? "")}`,
         );
+        if (requestSeq.current.get(k) !== seq) return;
         mergeGroups(data.nodes, [parentId]);
       } catch (e) {
         toast.error((e as Error).message);

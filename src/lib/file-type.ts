@@ -25,7 +25,21 @@ export const MIME_TYPES: Record<AllowedKind, string> = {
 
 export const ACCEPT_ATTRIBUTE = ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png";
 
-/** Loại hiển thị trực tiếp trên trình duyệt (xem trước) */
+/**
+ * Cách xem trước trên trình duyệt: PDF/ảnh hiển thị trực tiếp; DOCX/XLSX dựng lại ở trình duyệt (GĐ5b);
+ * DOC/XLS đời cũ chỉ tải về.
+ */
+export type PreviewKind = "pdf" | "image" | "docx" | "xlsx";
+
+export function previewKind(mimeType: string): PreviewKind | null {
+  if (mimeType === MIME_TYPES.pdf) return "pdf";
+  if (mimeType === MIME_TYPES.jpg || mimeType === MIME_TYPES.png) return "image";
+  if (mimeType === MIME_TYPES.docx) return "docx";
+  if (mimeType === MIME_TYPES.xlsx) return "xlsx";
+  return null;
+}
+
+/** Máy chủ trả tệp "inline" (trình duyệt tự hiển thị): PDF, ảnh */
 export function isPreviewable(mimeType: string): boolean {
   return mimeType === MIME_TYPES.pdf || mimeType === MIME_TYPES.jpg || mimeType === MIME_TYPES.png;
 }

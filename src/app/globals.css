@@ -180,3 +180,13 @@
 .prose-summary p + p {
   margin-top: 0.5rem;
 }
+
+/* Xem trước Word (docx-preview, GĐ5b): trang giấy trắng trên nền khung, cuộn ngang khi màn hẹp */
+.docx-host .docx-wrapper {
+  background: transparent;
+  padding: 1rem;
+}
+.docx-host .docx-wrapper > section.docx {
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.15);
+}

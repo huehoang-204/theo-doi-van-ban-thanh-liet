@@ -17,6 +17,7 @@ vi.mock("@/server/auth/current-user", () => ({
 
 const { db } = await import("@/lib/db");
 const docs = await import("@/server/actions/documents");
+const publishing = await import("@/server/actions/publishing");
 const notes = await import("@/server/actions/notifications");
 const { globalSearch } = await import("@/server/search/global");
 
@@ -135,9 +136,9 @@ describe("thông báo văn bản mới trong chương trình mình theo dõi", (
     currentUser = clerk;
     const root = await create(`Chương trình theo dõi ${RUN}`, null, "CTr");
     currentUser = leader;
-    expect((await docs.setProgramFollow({ id: root, follow: true })).ok).toBe(true);
+    expect((await publishing.setDocumentFollow({ id: root, follow: true })).ok).toBe(true);
     currentUser = clerk;
-    expect((await docs.setProgramFollow({ id: root, follow: true })).ok).toBe(true);
+    expect((await publishing.setDocumentFollow({ id: root, follow: true })).ok).toBe(true);
 
     const kh = await create(`Kế hoạch triển khai ${RUN}`, root, "KH", { number: `12/KH-${RUN}` });
     const n = await db.notification.findMany({ where: { link: `/van-ban/${kh}` } });
@@ -154,14 +155,19 @@ describe("thông báo văn bản mới trong chương trình mình theo dõi", (
     ).toBe(1);
 
     currentUser = leader;
-    await docs.setProgramFollow({ id: root, follow: false });
+    await publishing.setDocumentFollow({ id: root, follow: false });
     currentUser = clerk;
     const later = await create(`Báo cáo sơ kết ${RUN}`, root, "BC");
     expect(await db.notification.count({ where: { link: `/van-ban/${later}` } })).toBe(0);
 
-    // Chỉ theo dõi được chương trình (cấp 1)
-    const r = await docs.setProgramFollow({ id: kh, follow: true });
-    expect(r.ok).toBe(false);
+    // Theo dõi một văn bản cấp 2 → được báo văn bản mới dưới nó
+    currentUser = leader;
+    expect((await publishing.setDocumentFollow({ id: kh, follow: true })).ok).toBe(true);
+    currentUser = clerk;
+    const under = await create(`Quyết định thành lập ${RUN}`, kh, "QD");
+    expect(
+      await db.notification.count({ where: { link: `/van-ban/${under}`, userId: leader.id } }),
+    ).toBe(1);
   });
 
   it("đánh dấu đã đọc chỉ tác động thông báo của chính mình", async () => {

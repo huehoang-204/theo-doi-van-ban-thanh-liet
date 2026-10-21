@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderTree, List, Plus } from "lucide-react";
+import { FolderTree, List, Plus, Send } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,21 +9,26 @@ import { cn } from "@/lib/utils";
 
 import { useTree } from "./TreeContext";
 
-/** Chuyển "Dạng cây / Dạng danh sách" + nút chính "+ Chương trình" (Mục 4.5) */
-export function DocumentsHeaderActions() {
+/** Chuyển "Dạng cây / Dạng danh sách / Mới ban hành" + nút chính "+ Chương trình" (Mục 4.5, GĐ5b) */
+export function DocumentsHeaderActions({ unread = 0 }: { unread?: number }) {
   const pathname = usePathname();
   const tree = useTree();
   const isList = pathname.startsWith("/van-ban/danh-sach");
+  const isPublished = pathname.startsWith("/van-ban/ban-hanh");
+  const isTree = !isList && !isPublished;
   const tab = (active: boolean) =>
     cn(
-      "inline-flex h-10 items-center gap-2 rounded-md px-3 font-medium",
+      "inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-2 py-1 text-center leading-tight font-medium sm:px-3 sm:whitespace-nowrap",
       active ? "bg-card text-brand shadow-sm" : "text-muted-foreground hover:text-foreground",
     );
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <nav aria-label="Cách xem" className="inline-flex rounded-lg bg-muted p-1">
-        <Link href="/van-ban" className={tab(!isList)} aria-current={!isList ? "page" : undefined}>
-          <FolderTree className="size-5" aria-hidden />
+    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+      <nav
+        aria-label="Cách xem"
+        className="grid w-full grid-cols-3 rounded-lg bg-muted p-1 sm:inline-flex sm:w-auto"
+      >
+        <Link href="/van-ban" className={tab(isTree)} aria-current={isTree ? "page" : undefined}>
+          <FolderTree className="hidden size-5 sm:block" aria-hidden />
           Dạng cây
         </Link>
         <Link
@@ -31,8 +36,24 @@ export function DocumentsHeaderActions() {
           className={tab(isList)}
           aria-current={isList ? "page" : undefined}
         >
-          <List className="size-5" aria-hidden />
+          <List className="hidden size-5 sm:block" aria-hidden />
           Dạng danh sách
+        </Link>
+        <Link
+          href="/van-ban/ban-hanh"
+          className={tab(isPublished)}
+          aria-current={isPublished ? "page" : undefined}
+        >
+          <Send className="hidden size-5 sm:block" aria-hidden />
+          Mới ban hành
+          {unread > 0 && (
+            <span
+              className="rounded-full bg-accent-red px-2 text-sm leading-6 text-white tabular-nums"
+              aria-label={`${unread} văn bản gửi đến chưa xem`}
+            >
+              {unread}
+            </span>
+          )}
         </Link>
       </nav>
       {tree.permissions.canCreateProgram && (

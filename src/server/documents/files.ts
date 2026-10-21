@@ -69,6 +69,7 @@ export async function saveAttachment(
           documentId: owner.documentId,
           taskUpdateId: owner.taskUpdateId ?? null,
           submissionId: owner.submissionId ?? null,
+          commentId: owner.commentId ?? null,
           fileName: file.name.slice(0, 255),
           storageKey,
           mimeType: detected.mimeType,
@@ -116,6 +117,7 @@ export type AttachmentOwner = {
   documentId: string | null;
   taskUpdateId?: string;
   submissionId?: string;
+  commentId?: string;
 };
 
 /**
@@ -123,6 +125,7 @@ export type AttachmentOwner = {
  *  - documentId: sửa được văn bản
  *  - taskUpdateId (minh chứng tiến độ): được cập nhật tiến độ công việc đó
  *  - submissionId (tệp báo cáo): được nộp báo cáo cho đơn vị; tệp gắn luôn vào văn bản con tự tạo
+ *  - commentId (tệp trong thảo luận): người viết bình luận, khi còn xem được văn bản
  */
 export async function resolveUploadOwner(
   user: CurrentUser,
@@ -130,8 +133,16 @@ export async function resolveUploadOwner(
     documentId?: string | null;
     taskUpdateId?: string | null;
     submissionId?: string | null;
+    commentId?: string | null;
   },
 ): Promise<AttachmentOwner | null> {
+  if (target.commentId) {
+    const c = await db.documentComment.findUnique({ where: { id: target.commentId } });
+    if (!c || c.deletedAt || c.userId !== user.id) return null;
+    return (await canViewDocument(user, c.documentId))
+      ? { documentId: null, commentId: c.id }
+      : null;
+  }
   if (target.taskUpdateId) {
     const update = await db.taskUpdate.findUnique({
       where: { id: target.taskUpdateId },
@@ -158,9 +169,21 @@ export async function resolveUploadOwner(
 /** Quyền xem tệp theo chủ sở hữu */
 export async function canViewAttachment(
   user: CurrentUser,
-  a: { documentId: string | null; taskUpdateId: string | null; submissionId: string | null },
+  a: {
+    documentId: string | null;
+    taskUpdateId: string | null;
+    submissionId: string | null;
+    commentId?: string | null;
+  },
 ): Promise<boolean> {
   if (a.documentId && (await canViewDocument(user, a.documentId))) return true;
+  if (a.commentId) {
+    const c = await db.documentComment.findUnique({
+      where: { id: a.commentId },
+      select: { documentId: true, deletedAt: true },
+    });
+    if (c && !c.deletedAt && (await canViewDocument(user, c.documentId))) return true;
+  }
   if (a.taskUpdateId) {
     const scope = taskScopeWhere(user);
     const found = await db.task.findFirst({

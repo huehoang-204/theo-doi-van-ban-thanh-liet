@@ -32,6 +32,13 @@ async function main() {
     }
     const residentials = await tx.residential.deleteMany({ where: { isSample: true } });
     const schools = await tx.school.deleteMany({ where: { isSample: true } });
+    // Dấu vết của người dùng mẫu trên văn bản thật (thảo luận, người nhận do họ gửi)
+    await tx.documentComment.deleteMany({ where: { user: { isSample: true } } });
+    await tx.documentShare.deleteMany({ where: { createdBy: { isSample: true } } });
+    await tx.documentNode.updateMany({
+      where: { publishedBy: { isSample: true } },
+      data: { publishedById: null },
+    });
     const users = await tx.user.deleteMany({ where: { isSample: true } });
     return {
       tasks: tasks.count,

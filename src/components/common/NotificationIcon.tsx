@@ -8,6 +8,8 @@ import {
   ClipboardList,
   FilePlus2,
   FileText,
+  MessageSquare,
+  Send,
   Undo2,
   XCircle,
   type LucideIcon,
@@ -29,6 +31,8 @@ const ICONS: Record<string, { icon: LucideIcon; className: string }> = {
   REPORT_REQUIRED: { icon: FileText, className: "text-brand" },
   REPORT_SUBMITTED: { icon: FileText, className: "text-brand" },
   NEW_DOCUMENT: { icon: FilePlus2, className: "text-brand" },
+  DOCUMENT_PUBLISHED: { icon: Send, className: "text-brand" },
+  DOCUMENT_COMMENT: { icon: MessageSquare, className: "text-brand" },
 };
 
 export function NotificationIcon({ kind, className }: { kind: string; className?: string }) {

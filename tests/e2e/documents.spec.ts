@@ -169,7 +169,10 @@ test.describe("Cây văn bản — thao tác khác", () => {
     await row(page, /20\/KH-UBND/)
       .getByRole("link")
       .click();
-    await page.getByRole("tab", { name: /^Tệp/ }).click();
+    // Tệp đính kèm nằm ngay trên trang (khung xem trước — GĐ5b), không còn tab riêng
+    await expect(page.getByRole("heading", { name: /^Tệp tin đính kèm/ })).toBeVisible({
+      timeout: 60_000,
+    });
     await expect(
       page.getByText("Không tải lên văn bản có độ mật (Mật, Tối mật, Tuyệt mật)."),
     ).toBeVisible();
@@ -187,7 +190,7 @@ test.describe("Cây văn bản — thao tác khác", () => {
     ]);
     await expect(page.getByText("Đã tải lên 1 tệp.")).toBeVisible();
     await expect(page.getByText(/Tệp “gia-mao.pdf” không đúng định dạng cho phép/)).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Tệp (1)" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tệp tin đính kèm (1)" })).toBeVisible();
 
     await page.getByRole("button", { name: "Xem" }).click();
     const frame = page.getByTitle("Xem trước ke-hoach-20.pdf");
@@ -264,7 +267,7 @@ test.describe("Cây văn bản — thao tác khác", () => {
 });
 
 test.describe("Phạm vi xem văn bản", () => {
-  test("OFFICER không có nút tạo chương trình; VIEWER không thấy văn bản chưa được chia sẻ", async ({
+  test("OFFICER không có nút tạo chương trình; VIEWER chỉ thấy văn bản được gửi tới mình", async ({
     page,
   }) => {
     await login(page, "canbo1");
@@ -275,6 +278,11 @@ test.describe("Phạm vi xem văn bản", () => {
     await page.context().clearCookies();
     await login(page, "totruong1");
     await page.goto("/van-ban");
-    await expect(page.getByText("Chưa có chương trình nào.").first()).toBeVisible();
+    // Seed (GĐ5b): 88/UBND-VP gửi đích danh tổ trưởng, 45/QĐ-UBND gửi toàn phường → chỉ hiện các nhánh đó
+    await page.getByRole("button", { name: "Mở tất cả" }).click();
+    await expect(row(page, /88\/UBND-VP/)).toBeVisible();
+    await expect(row(page, /45\/QĐ-UBND/)).toBeVisible(); // gửi Toàn phường
+    await expect(row(page, /20\/KH-UBND/)).toHaveCount(0); // chỉ gửi Phòng Kinh tế
+    await expect(row(page, /Chương trình hành động thực hiện Nghị quyết/)).toHaveCount(0);
   });
 });

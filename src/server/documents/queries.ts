@@ -89,7 +89,8 @@ function directViewWhere(user: CurrentUser): Prisma.DocumentNodeWhereInput {
     }
     or.push({ tasks: { some: { deletedAt: null, OR: taskOr } } });
   }
-  if (user.roles.includes("VIEWER")) or.push({ shares: { some: { userId: user.id } } });
+  // Người nhận văn bản ban hành (mọi vai trò)
+  or.push({ shares: { some: { userId: user.id } } });
   return or.length > 0 ? { OR: or } : { id: { in: [] } };
 }
 

@@ -106,3 +106,20 @@ Cột "Trạng thái": **Mặc định** = đang làm theo phương án tạm; *
 | "Chương trình mình theo dõi"      | Nút "Theo dõi chương trình" trên văn bản cấp 1; không tự động theo dõi. Chỉ người có quyền xem văn bản mới được báo                     |
 | Tìm kiếm Ctrl+K                   | 5 nhóm (văn bản, công việc, trường, TDP, tổ chức đảng), 6 kết quả/nhóm, theo phạm vi xem của từng người; VIEWER không có nhóm công việc |
 | Nhật ký                           | Không sửa/xoá được trên giao diện; xuất Excel tối đa 10.000 dòng theo bộ lọc                                                            |
+
+## I. Giai đoạn 5b — Ban hành văn bản, xem trước Word/Excel, thảo luận (bổ sung 21/10/2026)
+
+Người phụ trách yêu cầu bổ sung theo mẫu hệ thống văn bản điều hành (ảnh iOffice Trường ĐH Đại Nam), chấp nhận lệch Mục 1.4 ("không thay iOffice"). Đã chốt: làm cả 4 phần; người nhận = đơn vị + cá nhân (+ Toàn phường); người nhận được xem và tải tệp; làm trước GĐ6.
+
+| Nội dung                       | Cách xử lý hiện tại                                                                                                                                                                                |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ai được ban hành / gửi         | Người được sửa văn bản (ADMIN, LEADER, CLERK; PARTY_ADMIN với văn bản lĩnh vực XD Đảng)                                                                                                            |
+| Gửi theo đơn vị                | Mọi tài khoản đang hoạt động của đơn vị **tại thời điểm gửi**; người vào đơn vị sau không tự nhận (gửi bổ sung để thêm)                                                                            |
+| Gửi lần nữa                    | "Gửi bổ sung": chỉ người nhận mới được thông báo; giữ mốc ban hành và người ban hành lần đầu                                                                                                       |
+| Thu hồi người nhận             | Chưa có (cần thì làm sau)                                                                                                                                                                          |
+| Tên đơn vị gửi trong thông báo | Đơn vị của người ban hành (không có đơn vị → họ tên)                                                                                                                                               |
+| Xem trước Word/Excel           | `.docx`, `.xlsx` dựng ngay trên trình duyệt (bố cục có thể khác bản in một chút); `.doc`, `.xls` đời cũ chỉ tải về. Muốn xem trước chính xác cần LibreOffice trên máy chủ (cài cần quyền quản trị) |
+| "Đã xem"                       | Ai mở trang chi tiết văn bản (kể cả người không phải người nhận)                                                                                                                                   |
+| "Đã tải tệp đính kèm"          | Ai bấm "Tải về" (xem trước không tính)                                                                                                                                                             |
+| Thảo luận                      | Người xem được văn bản đều viết được; chỉ người viết (hoặc ADMIN) xoá; xoá là ẩn, vẫn lưu nhật ký                                                                                                  |
+| Theo dõi                       | Theo dõi văn bản bất kỳ cấp nào; người ban hành và người viết thảo luận tự theo dõi                                                                                                                |

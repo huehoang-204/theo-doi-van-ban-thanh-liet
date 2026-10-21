@@ -66,7 +66,9 @@ export function DocumentWorkspace({ children }: { children: React.ReactNode }) {
     if (e.key === "ArrowRight") setWidth((w) => Math.min(MAX, w + 2));
   }
 
-  const isList = pathname.startsWith("/van-ban/danh-sach");
+  // Dạng danh sách và "Mới ban hành" chiếm cả chiều rộng (không hiện cây)
+  const isList =
+    pathname.startsWith("/van-ban/danh-sach") || pathname.startsWith("/van-ban/ban-hanh");
   const isDetail = /^\/van-ban\/[^/]+$/.test(pathname) && !isList;
 
   const dialogs = (

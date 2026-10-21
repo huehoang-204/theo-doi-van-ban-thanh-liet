@@ -14,26 +14,36 @@ export default async function DocumentsLayout({ children }: { children: React.Re
   const user = await requirePermission("document.list");
   // Việc thành "quá hạn" theo thời gian → tính lại chấm đỏ/tiến độ một lần mỗi ngày (worker GĐ5 cũng gọi)
   await ensureTreesFreshToday(db);
-  const [roots, maxDepth, types, fields, agencies, departments] = await Promise.all([
-    listChildren(user, null),
-    getMaxTreeDepth(),
-    db.documentType.findMany({
-      where: { active: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-    db.field.findMany({
-      where: { active: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-    db.issuingAgency.findMany({
-      where: { active: true },
-      orderBy: [{ level: "asc" }, { name: "asc" }],
-    }),
-    db.department.findMany({
-      where: { active: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-  ]);
+  const [roots, maxDepth, types, fields, agencies, departments, unreadPublished] =
+    await Promise.all([
+      listChildren(user, null),
+      getMaxTreeDepth(),
+      db.documentType.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+      db.field.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+      db.issuingAgency.findMany({
+        where: { active: true },
+        orderBy: [{ level: "asc" }, { name: "asc" }],
+      }),
+      db.department.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+      // Văn bản gửi đến tôi mà chưa mở (badge tab "Mới ban hành")
+      db.documentNode.count({
+        where: {
+          deletedAt: null,
+          publishedAt: { not: null },
+          shares: { some: { userId: user.id } },
+          views: { none: { userId: user.id } },
+        },
+      }),
+    ]);
   const opt = (rows: { id: string; name: string }[]) =>
     rows.map((r) => ({ value: r.id, label: r.name }));
   const canCreate = can(user, "document.create");
@@ -59,7 +69,7 @@ export default async function DocumentsLayout({ children }: { children: React.Re
       <PageHeader
         title={vi.nav.documents}
         description="Văn bản theo cây tối đa 5 cấp: Chương trình › Kế hoạch › Quyết định › Văn bản kèm theo › Báo cáo."
-        action={<DocumentsHeaderActions />}
+        action={<DocumentsHeaderActions unread={unreadPublished} />}
       />
       <DocumentWorkspace>{children}</DocumentWorkspace>
     </TreeProvider>

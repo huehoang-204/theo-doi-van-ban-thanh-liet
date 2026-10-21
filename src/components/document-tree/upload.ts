@@ -4,7 +4,8 @@ export type UploadResult =
   { ok: true; fileName: string } | { ok: false; fileName: string; message: string };
 
 /** Đích gắn tệp: văn bản (chuỗi id) hoặc minh chứng tiến độ / bản nộp báo cáo */
-export type UploadTarget = string | { taskUpdateId: string } | { submissionId: string };
+export type UploadTarget =
+  string | { taskUpdateId: string } | { submissionId: string } | { commentId: string };
 
 export function uploadOne(
   target: UploadTarget,
@@ -15,6 +16,7 @@ export function uploadOne(
     const body = new FormData();
     if (typeof target === "string") body.set("documentId", target);
     else if ("taskUpdateId" in target) body.set("taskUpdateId", target.taskUpdateId);
+    else if ("commentId" in target) body.set("commentId", target.commentId);
     else body.set("submissionId", target.submissionId);
     body.append("file", file);
     const xhr = new XMLHttpRequest();

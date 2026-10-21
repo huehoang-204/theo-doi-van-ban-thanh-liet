@@ -1,8 +1,10 @@
 "use client";
 
-import { Download, Eye, FileUp, Trash2 } from "lucide-react";
+import { Download, Eye, FileUp, Maximize2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
+
+import { FilePreview } from "@/components/common/FilePreview";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -14,7 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ACCEPT_ATTRIBUTE, formatFileSize, isPreviewable } from "@/lib/file-type";
+import { ACCEPT_ATTRIBUTE, formatFileSize, previewKind } from "@/lib/file-type";
+import { cn } from "@/lib/utils";
 
 import { SecretWarning } from "./SecretWarning";
 import { uploadOne } from "./upload";
@@ -30,18 +33,27 @@ export type AttachmentRow = {
 
 type Progress = { name: string; percent: number; error?: string };
 
+/**
+ * Tệp đính kèm của văn bản. `inline`: khung xem trước ngay dưới danh sách (như hệ thống văn bản điều hành),
+ * mặc định mở tệp xem được đầu tiên; "Mở lớn" xem toàn màn hình.
+ */
 export function FilesTab({
   documentId,
   files,
   canEdit,
+  inline = false,
 }: {
   documentId: string;
   files: AttachmentRow[];
   canEdit: boolean;
+  inline?: boolean;
 }) {
   const router = useRouter();
   const inputId = useId();
   const [preview, setPreview] = useState<AttachmentRow | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected =
+    files.find((f) => f.id === selectedId) ?? files.find((f) => previewKind(f.mimeType)) ?? null;
   const [deleting, setDeleting] = useState<AttachmentRow | null>(null);
   const [progress, setProgress] = useState<Progress[]>([]);
 
@@ -116,15 +128,26 @@ export function FilesTab({
       ) : (
         <ul className="flex flex-col divide-y rounded-xl border">
           {files.map((f) => (
-            <li key={f.id} className="flex flex-wrap items-center gap-3 p-3">
+            <li
+              key={f.id}
+              className={cn(
+                "flex flex-wrap items-center gap-3 p-3",
+                inline && selected?.id === f.id && "bg-brand-soft/40",
+              )}
+            >
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{f.fileName}</p>
                 <p className="text-sm text-muted-foreground">
                   {formatFileSize(f.sizeBytes)} · {f.uploadedBy} · {f.createdAt}
                 </p>
               </div>
-              {isPreviewable(f.mimeType) && (
-                <Button variant="outline" size="sm" onClick={() => setPreview(f)}>
+              {previewKind(f.mimeType) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-pressed={inline ? selected?.id === f.id : undefined}
+                  onClick={() => (inline ? setSelectedId(f.id) : setPreview(f))}
+                >
                   <Eye aria-hidden />
                   Xem
                 </Button>
@@ -151,27 +174,28 @@ export function FilesTab({
         </ul>
       )}
 
+      {inline && selected && (
+        <section aria-label={`Xem trước ${selected.fileName}`} className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="min-w-0 truncate text-muted-foreground">
+              Đang xem: <span className="font-medium text-foreground">{selected.fileName}</span>
+            </p>
+            <Button variant="ghost" size="sm" onClick={() => setPreview(selected)}>
+              <Maximize2 aria-hidden />
+              Mở lớn
+            </Button>
+          </div>
+          <FilePreview file={selected} className="h-[70dvh] min-h-96" />
+        </section>
+      )}
+
       <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
         <DialogContent className="h-[90dvh] max-w-[95vw] grid-rows-[auto_1fr] sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle className="truncate pr-8">{preview?.fileName}</DialogTitle>
             <DialogDescription className="sr-only">Xem trước tệp đính kèm</DialogDescription>
           </DialogHeader>
-          {preview &&
-            (preview.mimeType === "application/pdf" ? (
-              <iframe
-                src={`/api/files/${preview.id}`}
-                title={`Xem trước ${preview.fileName}`}
-                className="h-full w-full rounded-lg border"
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element -- ảnh phục vụ qua API có kiểm tra quyền
-              <img
-                src={`/api/files/${preview.id}`}
-                alt={preview.fileName}
-                className="mx-auto max-h-full object-contain"
-              />
-            ))}
+          {preview && <FilePreview file={preview} className="h-full" />}
         </DialogContent>
       </Dialog>
 

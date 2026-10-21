@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import type { Prisma, PrismaClient, Role, SchoolLevel } from "../src/generated/prisma/client";
 import { vnDateKey } from "../src/lib/format";
 import { BCRYPT_COST } from "../src/lib/password";
+import { publishTitle } from "../src/lib/publish";
 import { recomputeAllTrees } from "../src/server/documents/progress";
 import { createMissingPeriods } from "../src/server/reports/periods";
 
@@ -465,6 +466,121 @@ async function seedDocuments(db: Db, createdById: string) {
   return { byNumber, count: all.length };
 }
 
+// ---------------------------------------------------------------- Ban hành văn bản mẫu (GĐ5b)
+
+async function seedPublishing(db: Db, users: Record<string, string>, docs: Record<string, string>) {
+  const [all, departments] = await Promise.all([
+    db.user.findMany({ where: { active: true }, select: { id: true, departmentId: true } }),
+    db.department.findMany({ select: { id: true, name: true } }),
+  ]);
+  const dept = (name: string) => departments.find((d) => d.name === name)!.id;
+  const items = [
+    {
+      number: "45/QĐ-UBND",
+      by: users.vanthu!,
+      at: "2026-10-20T14:17:00+07:00",
+      all: true,
+      departments: [] as string[],
+      direct: [] as string[],
+      message:
+        "Kính gửi: Các đơn vị, cán bộ thuộc UBND phường.\nVăn phòng HĐND và UBND phường gửi Quyết định thành lập Tổ công tác chuyển đổi số. Đề nghị các đơn vị nghiên cứu, phối hợp thực hiện.\nTrân trọng!",
+    },
+    {
+      number: "88/UBND-VP",
+      by: users.vanthu!,
+      at: "2026-10-19T09:30:00+07:00",
+      all: false,
+      departments: [dept("Phòng Kinh tế, Hạ tầng và Đô thị"), dept("Phòng Văn hóa – Xã hội")],
+      direct: [users.totruong1!],
+      message:
+        "Kính gửi: Phòng Kinh tế, Hạ tầng và Đô thị; Phòng Văn hóa – Xã hội.\nĐề nghị rà soát danh mục thủ tục hành chính cần số hóa, báo cáo trước ngày 30/10/2026.",
+    },
+    {
+      number: "20/KH-UBND",
+      by: users.chutich!,
+      at: "2026-10-21T08:00:00+07:00",
+      all: false,
+      departments: [dept("Phòng Kinh tế, Hạ tầng và Đô thị")],
+      direct: [] as string[],
+      message: null,
+    },
+  ];
+  for (const it of items) {
+    const id = docs[it.number]!;
+    const at = new Date(it.at);
+    const doc = await db.documentNode.update({
+      where: { id },
+      data: {
+        publishedAt: at,
+        publishedById: it.by,
+        publishMessage: it.message,
+        recipientAll: it.all,
+        recipientDepartmentIds: it.departments,
+      },
+      include: { type: true },
+    });
+    const sender = await db.user.findUniqueOrThrow({
+      where: { id: it.by },
+      select: { fullName: true, department: { select: { name: true } } },
+    });
+    const to = all
+      .filter(
+        (u) =>
+          u.id !== it.by &&
+          (it.all ||
+            it.direct.includes(u.id) ||
+            (u.departmentId && it.departments.includes(u.departmentId))),
+      )
+      .map((u) => u.id);
+    await db.documentShare.createMany({
+      data: to.map((userId) => ({
+        documentId: id,
+        userId,
+        createdById: it.by,
+        direct: it.direct.includes(userId),
+        createdAt: at,
+      })),
+    });
+    await db.documentFollow.create({ data: { documentId: id, userId: it.by } });
+    await db.notification.createMany({
+      data: to.map((userId) => ({
+        userId,
+        kind: "DOCUMENT_PUBLISHED",
+        title: publishTitle({
+          sender: sender.department?.name ?? sender.fullName,
+          typeName: doc.type.name,
+          title: doc.title,
+          number: doc.number,
+        }),
+        link: `/van-ban/${id}`,
+        dedupKey: `PUBLISH:${id}`,
+        createdAt: at,
+      })),
+    });
+  }
+  // Một vài lượt xem và một thảo luận minh hoạ
+  const d88 = docs["88/UBND-VP"]!;
+  await db.documentView.createMany({
+    data: [users.canbo1!, users.chutich!].map((userId) => ({
+      documentId: d88,
+      userId,
+      firstViewedAt: new Date("2026-10-19T10:05:00+07:00"),
+      lastViewedAt: new Date("2026-10-19T10:05:00+07:00"),
+    })),
+  });
+  await db.documentComment.create({
+    data: {
+      documentId: d88,
+      userId: users.canbo1!,
+      content:
+        "Phòng Kinh tế, Hạ tầng và Đô thị đã nhận văn bản, sẽ rà soát và gửi danh mục trước 28/10/2026.",
+      createdAt: new Date("2026-10-19T10:20:00+07:00"),
+    },
+  });
+  await db.documentFollow.create({ data: { documentId: d88, userId: users.canbo1! } });
+  return items.length;
+}
+
 // ---------------------------------------------------------------- Yêu cầu báo cáo (kỳ báo cáo sinh ở Giai đoạn 3)
 async function seedReportRequirement(db: Db, documentId: string, followerUserId: string) {
   const recipient = await db.issuingAgency.findUnique({ where: { name: "UBND thành phố Hà Nội" } });
@@ -660,13 +776,14 @@ export async function seedSample(db: Db) {
   const { byNumber, count: docCount } = await seedDocuments(db, users.vanthu!);
   const report = await seedReportRequirement(db, byNumber["88/UBND-VP"]!, users.vanthu!);
   const taskCount = await seedTasks(db, users, byNumber);
+  const published = await seedPublishing(db, users, byNumber);
   await recomputeAllTrees(db); // tiến độ cộng dồn & chấm đỏ trên cây (Mục 3.4)
 
   const population = residentials.reduce((s, r) => s + (r.population ?? 0), 0);
   console.log(
     `✔ Dữ liệu mẫu: ${SAMPLE_USERS.length} người dùng (mật khẩu ${SAMPLE_PASSWORD}), ${schools.length} trường, ` +
       `${residentials.length} TDP (tổng ${population.toLocaleString("vi-VN")} nhân khẩu), ${partyCount} tổ chức đảng, ` +
-      `${docCount} văn bản, 1 yêu cầu báo cáo (${report.periods} kỳ, đã nộp ${report.submitted}), ${taskCount} công việc.`,
+      `${docCount} văn bản (${published} đã ban hành), 1 yêu cầu báo cáo (${report.periods} kỳ, đã nộp ${report.submitted}), ${taskCount} công việc.`,
   );
 }
 

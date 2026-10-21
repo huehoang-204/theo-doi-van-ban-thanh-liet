@@ -4,7 +4,7 @@ import { apiUser } from "@/server/auth/api";
 import { clientIp } from "@/server/auth/current-user";
 import { resolveUploadOwner, saveAttachment, type UploadOutcome } from "@/server/documents/files";
 
-// POST /api/files — multipart: documentId | taskUpdateId | submissionId + một hoặc nhiều "file".
+// POST /api/files — multipart: documentId | taskUpdateId | submissionId | commentId + một hoặc nhiều "file".
 // Mỗi tệp kiểm tra độc lập.
 export async function POST(request: Request) {
   const user = await apiUser("document.list");
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     documentId: field("documentId"),
     taskUpdateId: field("taskUpdateId"),
     submissionId: field("submissionId"),
+    commentId: field("commentId"),
   });
   if (!owner)
     return Response.json(

@@ -121,6 +121,16 @@ describe("văn bản — theo đối tượng", () => {
     expect(can(viewer, "document.view", doc({ sharedUserIds: [viewer.id] }))).toBe(true);
   });
 
+  it("người nhận văn bản ban hành (GĐ5b): OFFICER đơn vị khác cũng xem được văn bản gửi tới mình", () => {
+    const officer = userOf("OFFICER", { departmentId: "khac" });
+    expect(can(officer, "document.view", doc({ leadDepartmentId: DEPT }))).toBe(false);
+    expect(
+      can(officer, "document.view", doc({ leadDepartmentId: DEPT, sharedUserIds: [officer.id] })),
+    ).toBe(true);
+    // Được nhận không có nghĩa được sửa
+    expect(can(officer, "document.update", doc({ sharedUserIds: [officer.id] }))).toBe(false);
+  });
+
   it("Tạo/sửa: ADMIN, LEADER, CLERK; PARTY_ADMIN chỉ lĩnh vực Xây dựng Đảng; OFFICER, VIEWER không", () => {
     expectRow("document.create", [true, true, true, false, true, false]);
     const party = userOf("PARTY_ADMIN");

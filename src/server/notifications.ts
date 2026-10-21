@@ -14,6 +14,8 @@ export type NotificationKind =
   | "REPORT_REQUIRED"
   | "REPORT_SUBMITTED"
   | "NEW_DOCUMENT"
+  | "DOCUMENT_PUBLISHED"
+  | "DOCUMENT_COMMENT"
   // Do job 06:30 sinh (src/server/jobs/daily.ts)
   | "DUE_SOON"
   | "OVERDUE";

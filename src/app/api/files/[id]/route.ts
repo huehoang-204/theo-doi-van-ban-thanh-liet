@@ -22,7 +22,7 @@ function contentDisposition(kind: "inline" | "attachment", fileName: string) {
   return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }
 
-// GET /api/files/:id — kiểm tra quyền xem văn bản, ghi nhật ký; ?tai=1 để tải về thay vì xem trước
+// GET /api/files/:id — kiểm tra quyền xem văn bản, ghi nhật ký; ?tai=1 để tải về thay vì xem trước, ?xem=1 lấy dữ liệu để xem trước DOCX/XLSX
 export async function GET(request: Request, { params }: RouteContext<"/api/files/[id]">) {
   const user = await apiUser("document.list");
   if (user instanceof Response) return user;
@@ -41,17 +41,27 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
       { status: 410 },
     );
 
-  const download =
-    new URL(request.url).searchParams.get("tai") === "1" || !isPreviewable(attachment.mimeType);
+  // ?tai=1: tải về. ?xem=1: trình duyệt tự dựng bản xem trước (DOCX/XLSX) — tính là "xem", không phải "tải"
+  const query = new URL(request.url).searchParams;
+  const download = query.get("tai") === "1" || !isPreviewable(attachment.mimeType);
+  const mode =
+    query.get("tai") !== "1" && (!download || query.get("xem") === "1") ? "preview" : "download";
+  const documentId =
+    attachment.documentId ??
+    (attachment.commentId
+      ? (
+          await db.documentComment.findUnique({
+            where: { id: attachment.commentId },
+            select: { documentId: true },
+          })
+        )?.documentId
+      : null) ??
+    null;
   await audit(db, user.id, clientIp(request.headers), {
     action: "DOWNLOAD",
     entity: "Attachment",
     entityId: id,
-    after: {
-      documentId: attachment.documentId,
-      fileName: attachment.fileName,
-      mode: download ? "download" : "preview",
-    },
+    after: { documentId, fileName: attachment.fileName, mode },
   });
   return new Response(file.stream, {
     headers: {

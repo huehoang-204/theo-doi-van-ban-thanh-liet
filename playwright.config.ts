@@ -9,6 +9,8 @@ export default defineConfig({
   globalSetup: "./tests/e2e/global-setup.ts",
   fullyParallel: true,
   workers: 4,
+  // Dev server biên dịch trang lần đầu khá lâu (trang văn bản có thư viện xem trước Word/Excel)
+  timeout: 60_000,
   reporter: [["list"], ["html", { open: "never" }]],
   expect: { timeout: 10_000 },
   use: {

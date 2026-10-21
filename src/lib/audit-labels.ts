@@ -10,6 +10,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   DELETE: "Xoá (vào Thùng rác)",
   RESTORE: "Khôi phục",
   PURGE: "Xoá vĩnh viễn",
+  PUBLISH: "Ban hành / gửi văn bản",
   MOVE: "Di chuyển",
   LOGIN: "Đăng nhập",
   LOGIN_FAILED: "Đăng nhập sai",
@@ -25,6 +26,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
 export const AUDIT_ENTITY_LABELS: Record<string, string> = {
   DocumentNode: "Văn bản",
   Attachment: "Tệp đính kèm",
+  DocumentComment: "Thảo luận văn bản",
   Task: "Công việc",
   TaskUpdate: "Cập nhật tiến độ",
   TaskExtension: "Gia hạn công việc",
@@ -96,6 +98,10 @@ const FIELD_LABELS: Record<string, string> = {
   decision: "Quyết định",
   namHoc: "Năm học",
   rows: "Số dòng",
+  recipients: "Số người nhận",
+  added: "Người nhận mới",
+  recipientAll: "Gửi toàn phường",
+  message: "Lời gửi kèm",
 };
 
 const fieldLabel = (k: string) => FIELD_LABELS[k] ?? k;

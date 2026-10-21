@@ -5,6 +5,7 @@ import {
   normalizeForSearch,
   removeVietnameseTones,
   highlightParts,
+  initials,
 } from "@/lib/text";
 
 describe("bỏ dấu tiếng Việt", () => {
@@ -56,5 +57,14 @@ describe("highlightParts — tô sáng không dấu", () => {
         .map((p) => p.text),
     ).toEqual(["Đảng", "đảng"]);
     expect(highlightParts("Trường THCS", [])).toEqual([{ text: "Trường THCS", hit: false }]);
+  });
+});
+
+describe("initials — chữ viết tắt ảnh đại diện", () => {
+  it("họ + tên, bỏ phần trong ngoặc, giữ dấu", () => {
+    expect(initials("Nguyễn Thị Thu Hiền")).toBe("NH");
+    expect(initials("Văn thư (mẫu)")).toBe("VT");
+    expect(initials("Đảng")).toBe("ĐẢ");
+    expect(initials("  ")).toBe("?");
   });
 });

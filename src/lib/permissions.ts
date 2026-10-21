@@ -64,7 +64,7 @@ export type DocumentResource = {
   isInternalPublic: boolean;
   /** Tên lĩnh vực (PARTY_ADMIN chỉ tạo/sửa văn bản lĩnh vực Xây dựng Đảng) */
   fieldName?: string | null;
-  /** Người được chia sẻ (VIEWER) */
+  /** Người nhận khi ban hành văn bản (mọi vai trò xem được) */
   sharedUserIds?: readonly string[];
   /** Người/đơn vị có công việc gắn với văn bản (OFFICER xem được) */
   taskUserIds?: readonly string[];
@@ -158,6 +158,8 @@ function conditionalGrant(user: AuthUser, action: Action, resource: unknown): bo
   switch (action) {
     case "document.view": {
       const doc = resource as DocumentResource | undefined;
+      // Người nhận văn bản ban hành (GĐ5b) — vai trò nào cũng xem được văn bản gửi tới mình
+      if (doc?.sharedUserIds?.includes(user.id)) return true;
       if (has("OFFICER")) {
         if (!doc) return true;
         if (doc.isInternalPublic) return true;

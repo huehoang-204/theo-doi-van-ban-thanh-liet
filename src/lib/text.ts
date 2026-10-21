@@ -53,3 +53,16 @@ export function highlightParts(text: string, terms: readonly string[]): Highligh
   });
   return parts;
 }
+
+/** Chữ viết tắt cho ảnh đại diện: "Nguyễn Thị Thu Hiền" → "NH"; bỏ phần trong ngoặc ("Văn thư (mẫu)" → "VT") */
+export function initials(name: string): string {
+  const words = name
+    .replace(/\([^)]*\)/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return "?";
+  const first = [...words[0]!][0] ?? "";
+  if (words.length === 1) return [...words[0]!].slice(0, 2).join("").toLocaleUpperCase("vi");
+  return (first + ([...words.at(-1)!][0] ?? "")).toLocaleUpperCase("vi");
+}
