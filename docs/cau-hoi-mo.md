@@ -76,3 +76,16 @@ Cột "Trạng thái": **Mặc định** = đang làm theo phương án tạm; *
 | "Việc của tôi" hiện kỳ báo cáo nào                                     | Kỳ chưa nộp của đơn vị mình, quá hạn hoặc hạn trong 45 ngày tới                                                         |
 | Ngày gửi báo cáo                                                       | Không được sau hôm nay; nộp sau hạn → "Đã nộp trễ"                                                                      |
 | Sửa yêu cầu báo cáo                                                    | Kỳ đã nộp/đã quá hạn giữ nguyên; kỳ tương lai chưa nộp sinh lại theo quy tắc mới; đơn vị bị bỏ → xoá kỳ chưa nộp của họ |
+
+## G. Ghi nhận khi làm Giai đoạn 4
+
+| Nội dung                                                        | Cách xử lý hiện tại                                                                                                                              |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Biểu đồ "Chi bộ theo khối", "Trường theo cấp" (Mục 7.2 vẽ tròn) | Dùng **thanh ngang một màu** có số ở cuối thanh: dễ so sánh, đọc được tên dài, đúng yêu cầu "không màu mè". Đổi lại biểu đồ tròn nếu phường muốn |
+| "Nhân khẩu theo khu vực cũ" (Mục 7.2 vẽ cột đứng)               | Thanh ngang (tên khu vực dài, không phải xoay chữ)                                                                                               |
+| Thẻ "Tình hình thực hiện nhiệm vụ"                              | Quá hạn / Sắp đến hạn / Đang làm (chưa đến hạn + không hạn) / Đã hoàn thành. Việc chờ duyệt và việc huỷ không vào thẻ nào                        |
+| Phạm vi số liệu công việc trên bảng điều hành                   | Theo phạm vi xem công việc của người đang xem (LEADER/CLERK/ADMIN: toàn phường)                                                                  |
+| Khối ① "rút gọn" cho OFFICER (Mục 7.5)                          | 4 thẻ đầu (Diện tích, Dân số, TDP, Tổ chức đảng) + khối "Việc của tôi"; không có khối ②, không có nút Trình chiếu                                |
+| VIEWER                                                          | Khối ① đầy đủ + 3 khối lĩnh vực; không có khối ② (công việc nội bộ)                                                                              |
+| "Báo cáo cần nộp trong 14 ngày"                                 | Gồm cả kỳ đã quá hạn chưa nộp (quá hạn lên đầu), hiện 8 dòng + "Xem tất cả" → `/bao-cao?trongNgay=14`                                            |
+| Mốc "Cập nhật ngày …" trên thẻ                                  | Ngày sửa gần nhất của bản ghi nguồn (Thông tin phường / TDP / tổ chức đảng / số liệu năm học)                                                    |

@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
 
+import { PresentationScreen } from "@/components/dashboard/PresentationScreen";
 import { vi } from "@/lib/i18n/vi";
+import { requirePermission } from "@/server/auth/current-user";
+import { getDashboard } from "@/server/dashboard/data";
 
 export const metadata: Metadata = { title: vi.nav.presentation };
 
-// Chế độ trình chiếu lên TV phòng họp: toàn màn hình, không thanh bên — nội dung ở Giai đoạn 4.
-export default function PresentationPage() {
-  return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-brand px-6 text-center text-white">
-      <h1 className="text-4xl font-bold uppercase">{vi.app.wardName}</h1>
-      <p className="text-2xl text-white/80">{vi.nav.presentation}</p>
-      <p className="text-xl text-white/70">{vi.common.plannedForPhase(4)}</p>
-    </main>
-  );
+/** Chế độ trình chiếu lên TV phòng họp giao ban (Mục 7.1): không thanh bên, chữ to, tự làm mới */
+export default async function PresentationPage() {
+  const user = await requirePermission("dashboard.viewReduced");
+  const data = await getDashboard(user);
+  return <PresentationScreen initial={data} wardName={data.ward?.name ?? vi.app.wardName} />;
 }

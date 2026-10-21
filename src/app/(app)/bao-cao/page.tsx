@@ -35,7 +35,13 @@ export default async function ReportsPage({ searchParams }: PageProps<"/bao-cao"
         canUnlock={can(user, "report.unlock")}
         departments={options.departments}
         requirements={requirements.map((r) => ({ value: r.id, label: r.name }))}
-        initial={{ requirement: str(params.yeuCau), status: str(params.trangThai) }}
+        initial={{
+          requirement: str(params.yeuCau),
+          status: str(params.trangThai),
+          withinDays: str(params.trongNgay)
+            ? Number(str(params.trongNgay)) || undefined
+            : undefined,
+        }}
       />
     </>
   );

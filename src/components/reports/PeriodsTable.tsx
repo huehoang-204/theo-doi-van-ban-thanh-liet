@@ -50,7 +50,7 @@ type Props = {
   canUnlock: boolean;
   departments: Option[];
   requirements: Option[];
-  initial: { requirement?: string; status?: string };
+  initial: { requirement?: string; status?: string; withinDays?: number };
 };
 
 export function PeriodsTable({ rows, canUnlock, departments, requirements, initial }: Props) {
@@ -59,6 +59,7 @@ export function PeriodsTable({ rows, canUnlock, departments, requirements, initi
   const [requirement, setRequirement] = useState(initial.requirement ?? "");
   const [department, setDepartment] = useState("");
   const [status, setStatus] = useState(initial.status ?? "");
+  const [withinDays, setWithinDays] = useState<number | null>(initial.withinDays ?? null);
   const [submitting, setSubmitting] = useState<SubmitTarget | null>(null);
 
   const shown = useMemo(
@@ -69,9 +70,10 @@ export function PeriodsTable({ rows, canUnlock, departments, requirements, initi
             (tab === "can-nop" ? !r.submission && r.upcoming : !!r.submission)) &&
           (!requirement || r.requirement.id === requirement) &&
           (!department || r.department.id === department) &&
-          (!status || r.status === status),
+          (!status || r.status === status) &&
+          (withinDays === null || (!r.submission && r.daysLeft <= withinDays)),
       ),
-    [rows, tab, requirement, department, status],
+    [rows, tab, requirement, department, status, withinDays],
   );
 
   const columns = useMemo<ColumnDef<PeriodRow, unknown>[]>(
@@ -268,6 +270,19 @@ export function PeriodsTable({ rows, canUnlock, departments, requirements, initi
           </button>
         ))}
       </div>
+      {withinDays !== null && (
+        <p className="flex w-fit items-center gap-2 rounded-full bg-brand-soft px-3 py-1 font-medium text-brand">
+          Chưa nộp, hạn trong {withinDays} ngày tới (gồm cả quá hạn)
+          <button
+            type="button"
+            className="rounded-full px-1 hover:bg-white"
+            onClick={() => setWithinDays(null)}
+            aria-label="Bỏ lọc theo hạn"
+          >
+            ✕
+          </button>
+        </p>
+      )}
       <DataTable
         columns={columns}
         data={shown}

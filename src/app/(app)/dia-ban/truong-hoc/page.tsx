@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: vi.nav.schools };
 
 export default async function SchoolsPage({ searchParams }: PageProps<"/dia-ban/truong-hoc">) {
   const user = await requirePermission("school.view");
-  const { namHoc } = await searchParams;
+  const { namHoc, capHoc } = await searchParams;
   const schoolYear = normalizeSchoolYear(
     typeof namHoc === "string" ? namHoc : undefined,
     await getCurrentSchoolYear(),
@@ -49,6 +49,7 @@ export default async function SchoolsPage({ searchParams }: PageProps<"/dia-ban/
         description={`Danh sách trường trên địa bàn và quy mô năm học ${schoolYear}.`}
       />
       <SchoolsTable
+        initialLevel={typeof capHoc === "string" ? capHoc : undefined}
         rows={schools.map((s) => ({ ...pick(s), stat: s.stat ? pick(s.stat) : null }))}
         stats={stats.map(pick)}
         schoolYear={schoolYear}

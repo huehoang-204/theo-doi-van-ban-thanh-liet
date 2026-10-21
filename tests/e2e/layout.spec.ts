@@ -24,6 +24,13 @@ test.describe("Khung giao diện", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "vi");
     await expect(page.getByRole("banner")).toContainText("Phường Thanh Liệt");
     await expect(page.getByRole("heading", { level: 1, name: "Bảng điều hành" })).toBeVisible();
+    // Bảng điều hành không tràn ngang (thẻ số 38px, biểu đồ, bảng)
+    await expect(page.getByTestId("tile-population")).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(0);
 
     if (isMobile) {
       // < 768px: thanh bên ẩn, mở bằng hamburger

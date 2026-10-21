@@ -169,11 +169,20 @@ type Props = {
   schoolYear: string;
   schoolYears: string[];
   canManage: boolean;
+  /** Lọc cấp học từ URL (bảng điều hành) */
+  initialLevel?: string;
 };
 
-export function SchoolsTable({ rows, stats, schoolYear, schoolYears, canManage }: Props) {
+export function SchoolsTable({
+  rows,
+  stats,
+  schoolYear,
+  schoolYears,
+  canManage,
+  initialLevel,
+}: Props) {
   const router = useRouter();
-  const [level, setLevel] = useState("");
+  const [level, setLevel] = useState(initialLevel ?? "");
   const [ownership, setOwnership] = useState("");
   const [detail, setDetail] = useState<SchoolRow | null>(null);
   const [editingStat, setEditingStat] = useState<{ stat: SchoolStat | null } | null>(null);

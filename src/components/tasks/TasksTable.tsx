@@ -94,6 +94,7 @@ const COLUMNS: ColumnDef<TaskRow, unknown>[] = [
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: "MO", label: "Chưa xong (mọi trạng thái)" },
+  { value: "DANG_LAM", label: "Đang làm (chưa đến hạn + không hạn)" },
   ...(
     [
       "QUA_HAN",
@@ -131,6 +132,9 @@ export function TasksTable({ rows, canAssign, options, initial }: Props) {
         const statusOk =
           !status ||
           (status === "MO" && r.status !== null && !done) ||
+          (status === "DANG_LAM" &&
+            (r.flow === "NEW" || r.flow === "IN_PROGRESS") &&
+            (r.status === "CHUA_DEN_HAN" || r.status === "KHONG_HAN")) ||
           (status === "XONG" && r.flow === "DONE") ||
           (status === "HUY" && r.status === null) ||
           r.status === status;

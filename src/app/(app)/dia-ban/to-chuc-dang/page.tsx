@@ -36,8 +36,10 @@ function StatCard({
   );
 }
 
-export default async function PartyOrgsPage() {
+export default async function PartyOrgsPage({ searchParams }: PageProps<"/dia-ban/to-chuc-dang">) {
   const user = await requirePermission("partyOrg.view");
+  const params = await searchParams;
+  const str = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
   const [orgs, overview, options] = await Promise.all([
     listPartyOrgsTree(),
     getWardOverview(),
@@ -86,6 +88,7 @@ export default async function PartyOrgsPage() {
       )}
 
       <PartyOrgsTable
+        initial={{ type: str(params.loai), block: str(params.khoi) }}
         rows={orgs.map((o) => ({
           id: o.id,
           depth: o.treeDepth,

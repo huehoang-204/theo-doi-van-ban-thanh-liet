@@ -3,13 +3,14 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { ActiveBadge } from "@/components/common/ActiveBadge";
 import { CrudTable } from "@/components/common/CrudTable";
 import type { FieldConfig, Option } from "@/components/common/EntityForm";
 import { EntityFormDialog } from "@/components/common/EntityFormDialog";
 import { Button } from "@/components/ui/button";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { PartyBlock, PartyOrgType } from "@/generated/prisma/enums";
 import { formatNumber } from "@/lib/format";
 import {
@@ -123,7 +124,11 @@ type Props = {
   parents: Option[];
   residentials: Option[];
   schools: Option[];
+  /** Lọc sẵn từ URL (bảng điều hành): loai=chi-bo | <PartyOrgType>, khoi=<PartyBlock> */
+  initial?: { type?: string; block?: string };
 };
+
+const CELL_TYPES_SET = new Set(["CHI_BO_CO_SO", "CHI_BO_TRUC_THUOC"]);
 
 export function PartyOrgsTable({
   rows,
@@ -133,9 +138,24 @@ export function PartyOrgsTable({
   parents,
   residentials,
   schools,
+  initial,
 }: Props) {
   const router = useRouter();
   const [overrideOpen, setOverrideOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState(
+    initial?.type === "chi-bo" ? "CHI_BO" : (initial?.type ?? ""),
+  );
+  const [blockFilter, setBlockFilter] = useState(initial?.block ?? "");
+  const shown = useMemo(
+    () =>
+      rows.filter(
+        (r) =>
+          (!typeFilter ||
+            (typeFilter === "CHI_BO" ? CELL_TYPES_SET.has(r.type) : r.type === typeFilter)) &&
+          (!blockFilter || r.block === blockFilter),
+      ),
+    [rows, typeFilter, blockFilter],
+  );
 
   const fields = (row: PartyOrgRow | null): FieldConfig[] => [
     {
@@ -192,7 +212,7 @@ export function PartyOrgsTable({
     <>
       <CrudTable
         entityName="tổ chức đảng"
-        rows={rows}
+        rows={shown}
         columns={COLUMNS}
         canManage={canManage}
         fields={fields}
@@ -231,12 +251,41 @@ export function PartyOrgsTable({
         enableSorting={false}
         rowClassName={(r) => (r.active ? undefined : "opacity-60")}
         toolbarExtra={
-          canOverride && (
-            <Button variant="outline" onClick={() => setOverrideOpen(true)}>
-              <SlidersHorizontal aria-hidden />
-              Số liệu tổng hợp thủ công
-            </Button>
-          )
+          <>
+            <NativeSelect
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              aria-label="Lọc theo loại tổ chức"
+              className="max-w-56"
+            >
+              <NativeSelectOption value="">Mọi loại tổ chức</NativeSelectOption>
+              <NativeSelectOption value="CHI_BO">Chi bộ (cơ sở + trực thuộc)</NativeSelectOption>
+              {optionsOf(PARTY_ORG_TYPE_LABELS).map((o) => (
+                <NativeSelectOption key={o.value} value={o.value}>
+                  {o.label}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <NativeSelect
+              value={blockFilter}
+              onChange={(e) => setBlockFilter(e.target.value)}
+              aria-label="Lọc theo khối"
+              className="max-w-56"
+            >
+              <NativeSelectOption value="">Mọi khối</NativeSelectOption>
+              {optionsOf(PARTY_BLOCK_LABELS).map((o) => (
+                <NativeSelectOption key={o.value} value={o.value}>
+                  {o.label}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            {canOverride && (
+              <Button variant="outline" onClick={() => setOverrideOpen(true)}>
+                <SlidersHorizontal aria-hidden />
+                Số liệu tổng hợp thủ công
+              </Button>
+            )}
+          </>
         }
       />
       <EntityFormDialog

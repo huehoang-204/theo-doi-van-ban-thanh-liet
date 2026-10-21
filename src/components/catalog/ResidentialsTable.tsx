@@ -88,10 +88,12 @@ type Props = {
   canManage: boolean;
   oldAreas: Option[];
   partyOrgs: Option[];
+  /** Lọc khu vực cũ từ URL (bảng điều hành) */
+  initialArea?: string;
 };
 
-export function ResidentialsTable({ rows, canManage, oldAreas, partyOrgs }: Props) {
-  const [area, setArea] = useState("");
+export function ResidentialsTable({ rows, canManage, oldAreas, partyOrgs, initialArea }: Props) {
+  const [area, setArea] = useState(initialArea ?? "");
   const shown = useMemo(
     () => (area ? rows.filter((r) => r.oldAreaId === area) : rows),
     [rows, area],
