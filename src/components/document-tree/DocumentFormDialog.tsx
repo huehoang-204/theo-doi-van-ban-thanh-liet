@@ -1,7 +1,7 @@
 "use client";
 
 import { FileUp, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
@@ -54,6 +54,7 @@ const todayText = () => vnDateKey(new Date()).split("-").reverse().join("/");
 export function DocumentFormDialog(props: Props) {
   const tree = useTree();
   const router = useRouter();
+  const pathname = usePathname();
   const fileInputId = useId();
   const [files, setFiles] = useState<File[]>([]);
   const isEdit = props.mode === "edit";
@@ -337,7 +338,8 @@ export function DocumentFormDialog(props: Props) {
         await tree.refresh([data.parentId]);
         if (data.parentId && !tree.expanded.has(data.parentId)) tree.toggle(data.parentId);
         if (isEdit) router.refresh();
-        else router.push(`/van-ban/${data.id}`);
+        // Đang ở trang cây: ở lại, văn bản mới hiện ngay trong nhánh vừa mở; đang ở trang chi tiết: mở văn bản mới
+        else if (pathname !== "/van-ban") router.push(`/van-ban/${data.id}`);
       }}
     />
   );

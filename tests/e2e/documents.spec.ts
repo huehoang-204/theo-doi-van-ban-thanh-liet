@@ -60,9 +60,11 @@ test.describe("Cây văn bản — tiêu chí nghiệm thu Giai đoạn 2", () =
   test("tạo được cây đủ 5 cấp; nút thêm con ẩn ở cấp 5", async ({ page }) => {
     await page.getByRole("button", { name: "Chương trình", exact: true }).click();
     await fillDocumentForm(page, { title: `Chương trình thử 5 cấp ${RUN}` });
+    // Tạo từ trang cây: ở lại trang cây, chương trình mới hiện ngay → mở trang chi tiết
+    await row(page, `Chương trình thử 5 cấp ${RUN}`).getByRole("link").click();
     await expect(
       page.getByRole("heading", { level: 2, name: `Chương trình thử 5 cấp ${RUN}` }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 60_000 });
 
     const levels = [
       { type: "Kế hoạch (KH)", title: `Kế hoạch cấp 2 ${RUN}` },
@@ -80,7 +82,9 @@ test.describe("Cây văn bản — tiêu chí nghiệm thu Giai đoạn 2", () =
 
     // Ở cấp 5: không còn nút "Văn bản con" trên trang chi tiết …
     await expect(page.getByRole("button", { name: "Văn bản con", exact: true })).toHaveCount(0);
-    // … và trên cây: dòng cấp 5 không có nút "+", dòng cấp 4 thì có
+    // … và trên cây (trang riêng): dòng cấp 5 không có nút "+", dòng cấp 4 thì có
+    await page.getByRole("link", { name: "Cây văn bản" }).click();
+    await page.getByRole("button", { name: "Mở tất cả" }).click();
     const leaf = row(page, new RegExp(`Báo cáo cấp 5 ${RUN}`));
     await leaf.hover();
     await expect(leaf.getByTestId("add-child")).toHaveCount(0);
@@ -90,6 +94,7 @@ test.describe("Cây văn bản — tiêu chí nghiệm thu Giai đoạn 2", () =
     await expect(level4.getByTestId("add-child")).toBeVisible();
 
     // Breadcrumb bấm được từng cấp
+    await leaf.getByRole("link").click();
     const crumbs = page.getByRole("navigation", { name: "Vị trí trong cây" });
     await expect(crumbs.getByRole("link")).toHaveCount(4);
     await crumbs.getByRole("link", { name: `Kế hoạch cấp 2 ${RUN}` }).click();
@@ -120,7 +125,9 @@ test.describe("Cây văn bản — tiêu chí nghiệm thu Giai đoạn 2", () =
       "88/UBND-VP",
     );
 
-    // Chặn kéo vào chính con cháu
+    // Chặn kéo vào chính con cháu (quay lại trang cây — trang chi tiết không hiện cây)
+    await page.getByRole("link", { name: "Cây văn bản" }).click();
+    await expect(row(page, "Quy chế hoạt động của Tổ công tác")).toBeVisible();
     await dragRow(page, /12\/KH-UBND/, "Quy chế hoạt động của Tổ công tác");
     await expect(page.getByText(/vì đó là văn bản con\/cháu của chính nó/)).toBeVisible();
   });

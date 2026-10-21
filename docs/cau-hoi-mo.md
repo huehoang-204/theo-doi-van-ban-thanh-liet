@@ -123,3 +123,10 @@ Người phụ trách yêu cầu bổ sung theo mẫu hệ thống văn bản đ
 | "Đã tải tệp đính kèm"          | Ai bấm "Tải về" (xem trước không tính)                                                                                                                                                             |
 | Thảo luận                      | Người xem được văn bản đều viết được; chỉ người viết (hoặc ADMIN) xoá; xoá là ẩn, vẫn lưu nhật ký                                                                                                  |
 | Theo dõi                       | Theo dõi văn bản bất kỳ cấp nào; người ban hành và người viết thảo luận tự theo dõi                                                                                                                |
+
+## K. Bố cục trang Văn bản (người dùng chốt 21/10/2026)
+
+| Nội dung                                          | Cách xử lý hiện tại                                                                                                                                                                   |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mục 4.5 vẽ bố cục 2 cột (cây trái, chi tiết phải) | **Bỏ 2 cột** theo yêu cầu: trang Văn bản chỉ có cây chiếm cả chiều rộng; bấm văn bản mở trang chi tiết riêng, có nút "← Cây văn bản" (các nhánh đang mở được giữ nguyên khi quay lại) |
+| Thêm văn bản                                      | Từ trang cây: ở lại trang cây, văn bản mới hiện trong nhánh; từ trang chi tiết ("Văn bản con"): chuyển sang văn bản mới                                                               |

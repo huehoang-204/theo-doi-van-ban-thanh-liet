@@ -233,8 +233,8 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
         )}
       </header>
 
-      {/* ≥ 1536px: nội dung + cột thông tin bên phải; nhỏ hơn: cột thông tin xuống cuối trang */}
-      <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,1fr)_20rem]">
+      {/* ≥ 1280px: nội dung + cột thông tin bên phải; nhỏ hơn: cột thông tin xuống cuối trang */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-6">
           {social.published?.message && (
             <section

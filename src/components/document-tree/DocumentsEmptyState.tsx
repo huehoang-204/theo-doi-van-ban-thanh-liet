@@ -27,12 +27,11 @@ export function DocumentsEmptyState() {
       />
     );
   }
+  // Cây có dữ liệu: một dòng hướng dẫn ngắn phía trên cây
   return (
-    <EmptyState
-      icon={FolderTree}
-      title="Chọn một văn bản ở cây bên trái để xem chi tiết"
-      description="Bấm mũi tên để mở nhánh; rê chuột vào dòng để thấy nút “+” thêm văn bản con; bấm chuột phải để có thêm thao tác; kéo biểu tượng ⋮⋮ để di chuyển."
-      className="border-0"
-    />
+    <p className="mb-3 text-muted-foreground">
+      Bấm vào tên văn bản để mở trang chi tiết; bấm mũi tên để mở nhánh; rê chuột vào dòng để thấy
+      nút “+” thêm văn bản con; bấm chuột phải để có thêm thao tác; kéo biểu tượng ⋮⋮ để di chuyển.
+    </p>
   );
 }
