@@ -22,7 +22,8 @@ export type TreeNodeDTO = {
   /** "YYYY-MM-DD" */
   issuedDate: string | null;
   validity: "ACTIVE" | "EXPIRED" | "REPLACED";
-  progress: number;
+  /** % cộng dồn; null = nhánh chưa có việc */
+  progress: number | null;
   hasOverdue: boolean;
   childCount: number;
   type: { code: string; name: string; color: string; icon: string; isProgram: boolean };

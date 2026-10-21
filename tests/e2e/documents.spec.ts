@@ -200,7 +200,7 @@ test.describe("Cây văn bản — thao tác khác", () => {
 
   test("xoá mềm cả nhánh (phải xác nhận) rồi hoàn tác", async ({ page }) => {
     await page.getByRole("button", { name: "Mở tất cả" }).click();
-    const kh = row(page, /20\/KH-UBND/);
+    const kh = row(page, /Nghị quyết chuyên đề/);
     await kh.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Thêm văn bản con" }).click();
     await fillDocumentForm(page, { type: "Công văn (CV)", title: `Công văn con để xoá ${RUN}` });
@@ -215,11 +215,11 @@ test.describe("Cây văn bản — thao tác khác", () => {
     await dialog.getByLabel("Tôi xác nhận xoá cả nhánh").check();
     await dialog.getByRole("button", { name: "Xoá cả nhánh" }).click();
     await expect(page.getByText("Đã chuyển 2 văn bản vào Thùng rác.")).toBeVisible();
-    await expect(row(page, /20\/KH-UBND/)).toHaveCount(0);
+    await expect(row(page, /Nghị quyết chuyên đề/)).toHaveCount(0);
 
     await page.getByRole("button", { name: "Hoàn tác" }).click();
     await expect(page.getByText("Đã khôi phục.")).toBeVisible();
-    await expect(row(page, /20\/KH-UBND/)).toBeVisible();
+    await expect(row(page, /Nghị quyết chuyên đề/)).toBeVisible();
   });
 
   test("dạng danh sách có cột Cấp; xuất Excel cây thụt lề theo cấp", async ({ page }) => {

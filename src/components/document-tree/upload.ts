@@ -3,14 +3,19 @@
 export type UploadResult =
   { ok: true; fileName: string } | { ok: false; fileName: string; message: string };
 
+/** Đích gắn tệp: văn bản (chuỗi id) hoặc minh chứng tiến độ / bản nộp báo cáo */
+export type UploadTarget = string | { taskUpdateId: string } | { submissionId: string };
+
 export function uploadOne(
-  documentId: string,
+  target: UploadTarget,
   file: File,
   onProgress?: (percent: number) => void,
 ): Promise<UploadResult> {
   return new Promise((resolve) => {
     const body = new FormData();
-    body.set("documentId", documentId);
+    if (typeof target === "string") body.set("documentId", target);
+    else if ("taskUpdateId" in target) body.set("taskUpdateId", target.taskUpdateId);
+    else body.set("submissionId", target.submissionId);
     body.append("file", file);
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/files");
@@ -44,8 +49,8 @@ export function uploadOne(
   });
 }
 
-export async function uploadMany(documentId: string, files: File[]): Promise<UploadResult[]> {
+export async function uploadMany(target: UploadTarget, files: File[]): Promise<UploadResult[]> {
   const results: UploadResult[] = [];
-  for (const f of files) results.push(await uploadOne(documentId, f));
+  for (const f of files) results.push(await uploadOne(target, f));
   return results;
 }

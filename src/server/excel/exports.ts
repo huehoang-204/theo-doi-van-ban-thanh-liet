@@ -13,6 +13,10 @@ import type { CurrentUser } from "@/server/auth/current-user";
 import { listDocumentsFlat } from "@/server/documents/queries";
 import { flattenTree } from "@/lib/party";
 import { URGENCY_LABELS, VALIDITY_LABELS } from "@/lib/schemas/document";
+import { PRIORITY_LABELS } from "@/lib/schemas/task";
+import { FLOW_LABELS, statusLabel } from "@/lib/status";
+import { listPeriods } from "@/server/reports/queries";
+import { listTasks } from "@/server/tasks/queries";
 import { ROLE_LABELS } from "@/lib/permissions";
 import {
   getCurrentSchoolYear,
@@ -198,6 +202,62 @@ export const EXPORTS: Record<string, ExportDef> = {
           { header: "Số tệp", value: (d) => d._count.attachments, format: "int", width: 8 },
         ],
         ordered,
+      );
+    },
+  },
+  tasks: {
+    permission: "task.list",
+    fileName: () => "Cong-viec.xlsx",
+    build: async (_p, user) => {
+      const rows = await listTasks(user);
+      return buildExportWorkbook(
+        "Cong viec",
+        [
+          { header: "Công việc", value: (t) => t.title, width: 48 },
+          {
+            header: "Văn bản nguồn",
+            value: (t) => (t.document ? (t.document.number ?? t.document.title) : "Phát sinh"),
+            width: 24,
+          },
+          { header: "Chủ trì", value: (t) => t.lead, width: 30 },
+          { header: "Người giao", value: (t) => t.assigner, width: 22 },
+          { header: "Hạn", value: (t) => formatDate(t.dueDate), width: 12 },
+          {
+            header: "Trạng thái",
+            value: (t) => (t.status ? statusLabel(t.status) : "Đã huỷ"),
+            width: 20,
+          },
+          { header: "Bước xử lý", value: (t) => FLOW_LABELS[t.flow], width: 22 },
+          { header: "Tiến độ (%)", value: (t) => t.progress, format: "int", width: 11 },
+          { header: "Ưu tiên", value: (t) => PRIORITY_LABELS[t.priority], width: 12 },
+        ],
+        rows,
+      );
+    },
+  },
+  reports: {
+    permission: "report.list",
+    fileName: () => "Theo-doi-bao-cao.xlsx",
+    build: async (_p, user) => {
+      const rows = await listPeriods(user);
+      return buildExportWorkbook(
+        "Bao cao",
+        [
+          { header: "Báo cáo", value: (r) => r.requirement.name, width: 44 },
+          {
+            header: "Văn bản yêu cầu",
+            value: (r) => r.requirement.document.number ?? r.requirement.document.title,
+            width: 22,
+          },
+          { header: "Kỳ", value: (r) => r.label, width: 22 },
+          { header: "Đơn vị", value: (r) => r.department.name, width: 30 },
+          { header: "Hạn", value: (r) => formatDate(r.dueDate), width: 12 },
+          { header: "Trạng thái", value: (r) => statusLabel(r.status, "report"), width: 18 },
+          { header: "Số báo cáo", value: (r) => r.submission?.number, width: 16 },
+          { header: "Ngày gửi", value: (r) => formatDate(r.submission?.sentDate), width: 12 },
+          { header: "Nơi nhận", value: (r) => r.requirement.recipientAgency?.name, width: 26 },
+        ],
+        rows,
       );
     },
   },

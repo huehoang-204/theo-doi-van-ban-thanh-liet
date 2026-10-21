@@ -34,6 +34,7 @@ export type Action =
   | "report.list"
   | "report.createRequirement"
   | "report.submit"
+  | "report.unlock"
   // Địa bàn
   | "ward.view"
   | "ward.update"
@@ -110,6 +111,8 @@ const ROLE_GRANTS: Record<Action, readonly Role[]> = {
   "report.list": ["ADMIN", "LEADER", "CLERK", "OFFICER", "PARTY_ADMIN"],
   "report.createRequirement": ["ADMIN", "LEADER", "CLERK", "PARTY_ADMIN"],
   "report.submit": ["ADMIN", "LEADER", "CLERK"],
+  // Mở khoá bản nộp quá 24 giờ để sửa (Mục 5.1)
+  "report.unlock": ["ADMIN", "LEADER"],
 
   "ward.view": ALL_ROLES,
   "ward.update": ["ADMIN"],

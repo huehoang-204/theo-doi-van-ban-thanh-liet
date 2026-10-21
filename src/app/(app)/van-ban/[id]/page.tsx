@@ -7,6 +7,12 @@ import { Fragment } from "react";
 import { EmptyState } from "@/components/common/EmptyState";
 import { DocumentActions } from "@/components/document-tree/DocumentActions";
 import { FilesTab } from "@/components/document-tree/FilesTab";
+import {
+  AssignTaskButton,
+  DocumentReportsTab,
+  DocumentTasksTab,
+} from "@/components/document-tree/DocumentWorkTabs";
+import { toTaskRow } from "@/server/tasks/rows";
 import { TypeIcon } from "@/components/document-tree/type-icon";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +23,9 @@ import { canAddChild } from "@/lib/tree";
 import { requirePermission } from "@/server/auth/current-user";
 import { documentHistory, getDocumentDetail, getMaxTreeDepth } from "@/server/documents/queries";
 import { db } from "@/lib/db";
+import { catalogOptions } from "@/server/queries/catalog";
+import { requirementsOfDocument } from "@/server/reports/queries";
+import { listTasks, userOptions } from "@/server/tasks/queries";
 
 export const metadata: Metadata = { title: "Chi tiết văn bản" };
 
@@ -27,22 +36,6 @@ const ACTION_LABELS: Record<string, string> = {
   DELETE: "Xoá",
   RESTORE: "Khôi phục",
   DOWNLOAD: "Xem/tải tệp",
-};
-
-const FLOW_LABELS: Record<string, string> = {
-  NEW: "Mới giao",
-  IN_PROGRESS: "Đang thực hiện",
-  SUBMITTED: "Chờ duyệt",
-  DONE: "Hoàn thành",
-  CANCELLED: "Đã huỷ",
-};
-
-const FREQUENCY_LABELS: Record<string, string> = {
-  ONCE: "Một lần",
-  MONTHLY: "Hằng tháng",
-  QUARTERLY: "Hằng quý",
-  HALF_YEAR: "6 tháng",
-  YEARLY: "Hằng năm",
 };
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -76,11 +69,30 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
   }
 
   const { doc, ancestors, resource } = result;
-  const [maxDepth, history, departments] = await Promise.all([
-    getMaxTreeDepth(),
-    documentHistory(doc.id),
-    db.department.findMany({ where: { id: { in: doc.coDepartmentIds } }, select: { name: true } }),
-  ]);
+  const canAssign = can(user, "task.assign");
+  const canRequire = can(user, "report.createRequirement");
+  const [maxDepth, history, departments, tasks, requirements, options, users, agencies] =
+    await Promise.all([
+      getMaxTreeDepth(),
+      documentHistory(doc.id),
+      db.department.findMany({
+        where: { id: { in: doc.coDepartmentIds } },
+        select: { name: true },
+      }),
+      listTasks(user, { documentId: doc.id }),
+      requirementsOfDocument(user, doc.id),
+      canAssign || canRequire ? catalogOptions() : null,
+      canAssign || canRequire ? userOptions() : null,
+      canRequire
+        ? db.issuingAgency.findMany({
+            where: { active: true },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true },
+          })
+        : [],
+    ]);
+  const taskOptions = options && users ? { departments: options.departments, users } : null;
+  const docRef = { id: doc.id, label: label(doc) };
   const canEdit = can(user, "document.update", resource);
   const canDelete = can(user, "document.delete", resource);
   const canChild = can(user, "document.create") && canAddChild(doc.depth, maxDepth);
@@ -135,7 +147,9 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
             </Badge>
           )}
           {doc.isInternalPublic && <Badge variant="outline">Công khai nội bộ</Badge>}
-          {doc.progressCache > 0 && <Badge variant="outline">Tiến độ {doc.progressCache}%</Badge>}
+          {doc.progressCache !== null && (
+            <Badge variant="outline">Tiến độ {doc.progressCache}%</Badge>
+          )}
         </div>
         <DocumentActions
           node={{
@@ -173,6 +187,11 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
           canDelete={canDelete}
           canAddChild={canChild}
         />
+        {canAssign && taskOptions && (
+          <div>
+            <AssignTaskButton document={docRef} options={taskOptions} />
+          </div>
+        )}
       </header>
 
       <Tabs defaultValue="thong-tin">
@@ -184,10 +203,10 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
             Tệp ({doc.attachments.length})
           </TabsTrigger>
           <TabsTrigger value="cong-viec" className="flex-none">
-            Công việc ({doc.tasks.length})
+            Công việc ({tasks.length})
           </TabsTrigger>
           <TabsTrigger value="bao-cao" className="flex-none">
-            Báo cáo ({doc.reportRequirements.length})
+            Báo cáo ({requirements.length})
           </TabsTrigger>
           <TabsTrigger value="lich-su" className="flex-none">
             Lịch sử
@@ -280,52 +299,52 @@ export default async function DocumentDetailPage({ params }: PageProps<"/van-ban
         </TabsContent>
 
         <TabsContent value="cong-viec" className="pt-3">
-          {doc.tasks.length === 0 ? (
-            <p className="text-muted-foreground">Chưa có công việc nào giao từ văn bản này.</p>
-          ) : (
-            <ul className="flex flex-col divide-y rounded-xl border">
-              {doc.tasks.map((t) => (
-                <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
-                  <div className="min-w-0">
-                    <p className="font-medium">{t.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Chủ trì: {t.leadUser?.fullName ?? t.leadDepartment?.name ?? "—"} · Hạn:{" "}
-                      {formatDate(t.dueDate) || "không đặt"}
-                    </p>
-                  </div>
-                  <span className="text-sm">
-                    {FLOW_LABELS[t.flow]} · {t.progress}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-3 text-sm text-muted-foreground">
-            Giao việc, cập nhật tiến độ và duyệt hoàn thành sẽ có ở Giai đoạn 3.
-          </p>
+          <DocumentTasksTab
+            tasks={tasks.map(toTaskRow)}
+            assign={canAssign && taskOptions ? { document: docRef, options: taskOptions } : null}
+          />
         </TabsContent>
 
         <TabsContent value="bao-cao" className="pt-3">
-          {doc.reportRequirements.length === 0 ? (
-            <p className="text-muted-foreground">Văn bản này không đặt yêu cầu báo cáo.</p>
-          ) : (
-            <ul className="flex flex-col divide-y rounded-xl border">
-              {doc.reportRequirements.map((r) => (
-                <li key={r.id} className="p-3">
-                  <p className="font-medium">{r.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {FREQUENCY_LABELS[r.frequency]}
-                    {r.dueDayOfPeriod ? `, hạn ngày ${r.dueDayOfPeriod}` : ""} ·{" "}
-                    {formatDate(r.startDate)} – {formatDate(r.endDate) || "…"}
-                    {r.recipientAgency && ` · Nơi nhận: ${r.recipientAgency.name}`}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-3 text-sm text-muted-foreground">
-            Tạo yêu cầu báo cáo, sinh kỳ và nộp báo cáo sẽ có ở Giai đoạn 3.
-          </p>
+          <DocumentReportsTab
+            documentId={doc.id}
+            options={
+              canRequire && taskOptions
+                ? {
+                    ...taskOptions,
+                    agencies: agencies.map((a) => ({ value: a.id, label: a.name })),
+                  }
+                : null
+            }
+            requirements={requirements.map((r) => ({
+              id: r.id,
+              name: r.name,
+              frequency: r.frequency,
+              onceDueDate: r.onceDueDate,
+              dueDayOfPeriod: r.dueDayOfPeriod,
+              dueMonthOffset: r.dueMonthOffset,
+              startDate: r.startDate,
+              endDate: r.endDate,
+              recipientAgencyId: r.recipientAgencyId,
+              departmentIds: r.departmentIds,
+              followerUserId: r.followerUserId,
+              autoCreateChild: r.autoCreateChild,
+              active: r.active,
+              recipient: r.recipientAgency?.name ?? null,
+              follower: r.followerUser?.fullName ?? null,
+              departmentNames: r.departmentNames,
+              stats: r.stats,
+              upcoming: r.upcoming.map((p) => ({
+                id: p.id,
+                label: p.label,
+                department: p.department.name,
+                dueDate: formatDate(p.dueDate),
+                daysLeft: p.daysLeft,
+                status: p.status,
+                canSubmit: p.canSubmit,
+              })),
+            }))}
+          />
         </TabsContent>
 
         <TabsContent value="lich-su" className="pt-3">

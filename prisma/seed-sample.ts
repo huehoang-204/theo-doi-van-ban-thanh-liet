@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 import type { Prisma, PrismaClient, Role, SchoolLevel } from "../src/generated/prisma/client";
 import { vnDateKey } from "../src/lib/format";
 import { BCRYPT_COST } from "../src/lib/password";
+import { recomputeAllTrees } from "../src/server/documents/progress";
+import { createMissingPeriods } from "../src/server/reports/periods";
 
 const SAMPLE_PASSWORD = "ThanhLiet@2026";
 const TARGET_POPULATION = 92_000;
@@ -466,7 +468,7 @@ async function seedDocuments(db: Db, createdById: string) {
 // ---------------------------------------------------------------- Yêu cầu báo cáo (kỳ báo cáo sinh ở Giai đoạn 3)
 async function seedReportRequirement(db: Db, documentId: string, followerUserId: string) {
   const recipient = await db.issuingAgency.findUnique({ where: { name: "UBND thành phố Hà Nội" } });
-  await db.reportRequirement.create({
+  const req = await db.reportRequirement.create({
     data: {
       documentId,
       name: "Báo cáo kết quả số hóa hồ sơ thủ tục hành chính",
@@ -486,6 +488,32 @@ async function seedReportRequirement(db: Db, documentId: string, followerUserId:
       isSample: true,
     },
   });
+  // Sinh 12 kỳ × 3 đơn vị và nộp sẵn các kỳ đã qua: đơn vị 1 nộp đúng hạn; đơn vị 2 nộp,
+  // riêng tháng 01 nộp trễ 1 ngày; đơn vị 3 bỏ sót vài kỳ (quá hạn) để có số liệu minh hoạ
+  const periods = await createMissingPeriods(db, req);
+  const today = dayFromToday(0);
+  const past = await db.reportPeriod.findMany({
+    where: { requirementId: req.id, dueDate: { lt: today } },
+    orderBy: { dueDate: "asc" },
+  });
+  let submitted = 0;
+  for (const p of past) {
+    const deptIndex = req.departmentIds.indexOf(p.departmentId);
+    const month = p.periodStart.getUTCMonth();
+    if (deptIndex === 2 && month >= 6) continue; // đơn vị 3: quá hạn chưa nộp từ tháng 7
+    const late = deptIndex === 1 && month === 0;
+    await db.reportSubmission.create({
+      data: {
+        periodId: p.id,
+        number: `${month + 1}/BC-${deptIndex + 1}`,
+        sentDate: new Date(p.dueDate.getTime() + (late ? 1 : -2) * 86_400_000),
+        submittedById: followerUserId,
+        createdAt: new Date(p.dueDate.getTime() - 86_400_000),
+      },
+    });
+    submitted++;
+  }
+  return { periods, submitted };
 }
 
 // ---------------------------------------------------------------- Công việc (~25, đủ các trạng thái, tính theo ngày chạy seed)
@@ -592,6 +620,13 @@ async function seedTasks(db: Db, users: Record<string, string>, docs: Record<str
           p.doneAt !== undefined
             ? new Date(dayFromToday(p.doneAt).getTime() + 9 * 3_600_000)
             : null,
+        // Mốc báo hoàn thành (D3): việc chờ duyệt báo hôm qua; việc đã duyệt = lúc hoàn thành
+        submittedAt:
+          p.flow === "SUBMITTED"
+            ? new Date(dayFromToday(-1).getTime() + 15 * 3_600_000)
+            : p.doneAt !== undefined
+              ? new Date(dayFromToday(p.doneAt).getTime() + 9 * 3_600_000)
+              : null,
         isSample: true,
       },
     });
@@ -623,14 +658,15 @@ export async function seedSample(db: Db) {
   const residentials = await seedResidentials(db);
   const partyCount = await seedPartyOrgs(db, residentials, schools);
   const { byNumber, count: docCount } = await seedDocuments(db, users.vanthu!);
-  await seedReportRequirement(db, byNumber["88/UBND-VP"]!, users.vanthu!);
+  const report = await seedReportRequirement(db, byNumber["88/UBND-VP"]!, users.vanthu!);
   const taskCount = await seedTasks(db, users, byNumber);
+  await recomputeAllTrees(db); // tiến độ cộng dồn & chấm đỏ trên cây (Mục 3.4)
 
   const population = residentials.reduce((s, r) => s + (r.population ?? 0), 0);
   console.log(
     `✔ Dữ liệu mẫu: ${SAMPLE_USERS.length} người dùng (mật khẩu ${SAMPLE_PASSWORD}), ${schools.length} trường, ` +
       `${residentials.length} TDP (tổng ${population.toLocaleString("vi-VN")} nhân khẩu), ${partyCount} tổ chức đảng, ` +
-      `${docCount} văn bản, 1 yêu cầu báo cáo, ${taskCount} công việc.`,
+      `${docCount} văn bản, 1 yêu cầu báo cáo (${report.periods} kỳ, đã nộp ${report.submitted}), ${taskCount} công việc.`,
   );
 }
 

@@ -20,6 +20,7 @@ import {
 } from "@/lib/tree";
 import { withAuth } from "@/server/action";
 import type { CurrentUser } from "@/server/auth/current-user";
+import { recomputeTrees } from "@/server/documents/progress";
 import { documentResourceOf, getMaxTreeDepth } from "@/server/documents/queries";
 import { AppError } from "@/server/errors";
 import { sanitizeSummary } from "@/server/sanitize";
@@ -268,6 +269,13 @@ export const moveDocument = withAuth(
       FROM unnest(${order.map((o) => o.id)}::text[], ${order.map((o) => o.sortOrder)}::int[]) AS u(id, sort_order)
       WHERE d."id" = u.id AND d."sortOrder" IS DISTINCT FROM u.sort_order`;
 
+    // Tiến độ cộng dồn & chấm đỏ của cả cây cũ và cây mới (Mục 3.4)
+    const after = await tx.documentNode.findUniqueOrThrow({
+      where: { id: node.id },
+      select: { rootId: true },
+    });
+    await recomputeTrees(tx, [node.rootId ?? node.id, after.rootId ?? node.id]);
+
     audit({
       action: "MOVE",
       entity: "DocumentNode",
@@ -315,6 +323,7 @@ export const deleteDocument = withAuth(
       where: { path: { startsWith: node.path }, deletedAt: null },
       data: { deletedAt },
     });
+    await recomputeTrees(tx, [node.rootId ?? node.id]);
     audit({
       action: "DELETE",
       entity: "DocumentNode",
@@ -352,6 +361,7 @@ export const restoreDocument = withAuth(
       where: { path: { startsWith: node.path }, deletedAt: node.deletedAt },
       data: { deletedAt: null },
     });
+    await recomputeTrees(tx, [node.rootId ?? node.id]);
     audit({
       action: "RESTORE",
       entity: "DocumentNode",

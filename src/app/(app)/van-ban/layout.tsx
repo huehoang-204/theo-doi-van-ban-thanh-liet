@@ -6,11 +6,14 @@ import { db } from "@/lib/db";
 import { vi } from "@/lib/i18n/vi";
 import { can } from "@/lib/permissions";
 import { requirePermission } from "@/server/auth/current-user";
+import { ensureTreesFreshToday } from "@/server/documents/progress";
 import { getMaxTreeDepth, listChildren } from "@/server/documents/queries";
 
 /** Layout giữ nguyên khi chuyển giữa các văn bản → cây không bị tải lại / mất trạng thái mở nhánh */
 export default async function DocumentsLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePermission("document.list");
+  // Việc thành "quá hạn" theo thời gian → tính lại chấm đỏ/tiến độ một lần mỗi ngày (worker GĐ5 cũng gọi)
+  await ensureTreesFreshToday(db);
   const [roots, maxDepth, types, fields, agencies, departments] = await Promise.all([
     listChildren(user, null),
     getMaxTreeDepth(),

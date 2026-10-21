@@ -69,6 +69,15 @@ Phiên bản pin chính xác trong `package.json` (`.npmrc` có `save-exact=true
 - **Form**: `EntityForm` có `type: "custom"` (render tuỳ biến), `visibleWhen`, ô `date` dùng `DateInput` (lịch vi, tuần bắt đầu Thứ Hai, nhãn T2…CN). Nội dung tóm tắt: `RichTextEditor` + lọc lại ở server bằng `sanitize-html` (`src/server/sanitize.ts`).
 - **Integration test** (`npm run test:integration`): chạy server action thật trên CSDL `<db>_test` (vitest, mock phiên + `revalidatePath`, alias `server-only`).
 - `flattenTree` (src/lib/party.ts) trả `treeDepth` — không ghi đè `depth` của bản ghi.
+- **Công việc & báo cáo** (GĐ3):
+  - Trạng thái theo hạn `src/lib/status.ts` (`dueStatus`, `taskDueStatus`, `checkTransition`, nhãn theo ngữ cảnh task/report). Hạn so theo ngày giờ VN; hoàn thành trong ngày hạn = đúng hạn. Việc SUBMITTED xét theo `submittedAt` (không thành quá hạn vì chờ duyệt); duyệt → `completedAt = submittedAt` (D3).
+  - Sinh kỳ `src/lib/report-periods.ts` (hàm thuần); ghi DB `src/server/reports/periods.ts` (`createMissingPeriods`, `regenerateFuturePeriods` khi sửa yêu cầu — xoá kỳ tương lai chưa nộp rồi sinh lại, `extendOpenRequirements` cho job hằng ngày). Tối đa 24 kỳ/đơn vị mỗi lần (D1); ngày hạn > số ngày tháng → cuối tháng.
+  - Nộp báo cáo: mỗi kỳ một bản nộp (`ReportSubmission.periodId` unique); tự tạo văn bản con loại BC dưới văn bản yêu cầu nếu `autoCreateChild` và còn chỗ (D4 — có tuỳ chọn tắt); sửa trong 24 giờ hoặc sau khi LEADER/ADMIN mở khoá (`unlockedAt`).
+  - Tiến độ cộng dồn `src/lib/progress.ts` (`rollUpProgress`, bỏ nhánh không có việc & việc huỷ — D2); ghi DB `src/server/documents/progress.ts` (`recomputeTrees` sau mọi thay đổi việc/cấu trúc cây, `ensureTreesFreshToday` chạy 1 lần/ngày khi mở trang Văn bản — worker GĐ5 sẽ gọi trực tiếp). `progressCache` null = nhánh chưa có việc.
+  - Phạm vi: `taskScopeWhere` (ADMIN/LEADER/CLERK tất cả; OFFICER việc mình/đơn vị/mình giao; PARTY_ADMIN việc mình/mình giao), `periodScopeWhere` (đơn vị mình hoặc mình theo dõi). Thông báo trong ứng dụng ghi ở `src/server/notifications.ts` (chuông hiển thị ở GĐ5).
+  - Tệp đính kèm có 3 loại chủ: văn bản / `taskUpdateId` (minh chứng) / `submissionId` (tệp báo cáo, gắn luôn vào văn bản con tự tạo) — `resolveUploadOwner`, `canViewAttachment`.
+  - Hàm dựng dữ liệu dòng bảng cho client (`toTaskRow`, `toPeriodRow`) đặt ở `src/server/*/rows.ts`, KHÔNG trong file `"use client"`.
+  - Biểu tượng trạng thái dùng icon lucide (`STATUS_ICONS`), không dùng emoji (máy thiếu font emoji hiện ô vuông).
 - **Biểu đồ**: màu đường dữ liệu `--chart-1` (#3B5BDB sáng / #5C7CFA tối) đã qua `validate_palette` của skill dataviz; không dùng `#2563EB` (màu trạng thái).
 - **Thanh bên**: cookie `sidebar-collapsed`; < 768px menu hamburger, 768–1279px chỉ biểu tượng, ≥ 1280px đầy đủ.
 - **`AGENTS.md`** do `next dev` tự sinh/ghi lại — giữ trong repo, không sửa tay.
@@ -104,7 +113,8 @@ Phiên bản pin chính xác trong `package.json` (`.npmrc` có `save-exact=true
 │  │  ├─ db.ts permissions.ts password.ts party.ts audit.ts format.ts storage.ts
 │  │  ├─ schemas/         zod dùng chung (common, catalog, user, auth)
 │  │  ├─ excel/           import-specs.ts, parse.ts (thuần)
-│  │  ├─ status.ts        trạng thái theo hạn (Mục 3.3)      — có unit test
+│  │  ├─ status.ts        trạng thái theo hạn + luồng việc (Mục 3.3, 5.2) — có unit test
+│  │  ├─ progress.ts      tiến độ cộng dồn & chấm đỏ (Mục 3.4)  — có unit test
 │  │  ├─ tree.ts          path/depth/move/reorder/kéo-thả     — có unit test (+ integration)
 │  │  ├─ file-type.ts search.ts
 │  │  ├─ report-periods.ts sinh kỳ báo cáo                     — có unit test
@@ -182,8 +192,10 @@ curl http://localhost:3250/api/health    # {"status":"ok","db":"ok"}
       _Nghiệm thu_: cây đủ 5 cấp; nút thêm con ẩn ở cấp 5; kéo nhánh 3 cấp vào nút cấp 3 bị từ chối rõ ràng; "quyet dinh thanh lap" ra "Quyết định thành lập…".
       _Kết quả_: cả 4 tiêu chí đạt bằng e2e (tạo 5 cấp qua giao diện; "+"/"Văn bản con" ẩn ở cấp 5; kéo bằng chuột bị từ chối với thông báo nêu số cấp; tìm không dấu tô vàng + tự mở nhánh) và integration test trên CSDL thật (DB không đổi khi bị từ chối). Thêm: tải lười theo nhánh, đính kèm + magic bytes + xem PDF, xoá cả nhánh/hoàn tác, dạng danh sách + thùng rác, xuất Excel cây thụt lề, giao diện điện thoại. 118 unit + 13 integration + 36 e2e.
       _Để giai đoạn sau_: tiến độ cộng dồn & chấm đỏ nhánh quá hạn (cột `progressCache`/`hasOverdueDescendant` đã hiển thị, tính ở GĐ3); form "Yêu cầu báo cáo" và "Giao việc" từ văn bản (GĐ3); chia sẻ văn bản cho VIEWER (bảng `DocumentShare` có sẵn, chưa có giao diện); trang Thùng rác chung + job xoá vĩnh viễn 30 ngày (GĐ5); nhân bản cấu trúc chương trình (GĐ7).
-- [ ] **Giai đoạn 3 — Công việc & Báo cáo**: giao việc, tiến độ, báo hoàn thành/duyệt/trả lại, gia hạn; yêu cầu báo cáo một lần/định kỳ, sinh kỳ, nộp, tự tạo văn bản con; unit test `status.ts`, `report-periods.ts`; "Việc của tôi"; tiến độ cộng dồn; chấm đỏ nhánh quá hạn.
+- [x] **Giai đoạn 3 — Công việc & Báo cáo** _(xong 21/10/2026)_: giao việc, tiến độ, báo hoàn thành/duyệt/trả lại, gia hạn; yêu cầu báo cáo một lần/định kỳ, sinh kỳ, nộp, tự tạo văn bản con; unit test `status.ts`, `report-periods.ts`; "Việc của tôi"; tiến độ cộng dồn; chấm đỏ nhánh quá hạn.
       _Nghiệm thu_: báo cáo tháng ngày 20, 01–12/2026, 3 đơn vị → đúng 36 kỳ; nộp ngày 21 → "Đã nộp trễ".
+      _Kết quả_: đạt ở cả 3 tầng — unit (`generatePeriods` 12 kỳ × 3 = 36; nộp 21/01 cho hạn 20/01 → "Đã nộp trễ"), integration trên CSDL thật (36 bản ghi kỳ; trạng thái `HOAN_THANH_TRE`; tự tạo văn bản con), e2e qua giao diện (form xem trước "36 kỳ", trang Theo dõi báo cáo 36 dòng, nộp 21/01 hiện "Đã nộp trễ", văn bản con trên cây). Thêm: luồng việc đầy đủ (giao → tiến độ + minh chứng → gia hạn → báo hoàn thành → trả lại → duyệt), Việc của tôi (trang mặc định OFFICER), tiến độ cộng dồn + chấm đỏ trên cây, xuất Excel công việc/báo cáo. 146 unit + 20 integration + 42 e2e.
+      _Để giai đoạn sau_: chuông thông báo + job 06:30 nhắc hạn/quá hạn và gọi `extendOpenRequirements`/`recomputeAllTrees` (GĐ5); dashboard dùng `/cong-viec?trangThai=…`, `/bao-cao?trangThai=…` (GĐ4).
 - [ ] **Giai đoạn 4 — Bảng điều hành**: `/api/dashboard` 1 lần gọi; 5 khối Mục 7; mọi con số bấm được; chọn năm học; Trình chiếu tự làm mới.
       _Nghiệm thu_: số khớp danh mục; "Quá hạn" ra đúng danh sách; đẹp ở 1920×1080, 1366×768, 390px.
 - [ ] **Giai đoạn 5 — Thông báo, tìm kiếm, nhật ký, thùng rác**: worker cron 06:30; chuông thông báo; `Ctrl+K`; trang nhật ký; Thùng rác (job xóa vĩnh viễn > 30 ngày).

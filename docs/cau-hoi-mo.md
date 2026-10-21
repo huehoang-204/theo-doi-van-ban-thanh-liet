@@ -29,16 +29,16 @@ Cột "Trạng thái": **Mặc định** = đang làm theo phương án tạm; *
 | CSDL dev          | PostgreSQL 14 userspace trên máy A30 (không Docker); production PostgreSQL 16                                                                                                                            |
 | shadcn/ui         | Style `radix-nova` (Radix, đúng Mục 8.3) — không dùng style mặc định `base-nova` (Base UI)                                                                                                               |
 
-## C. Đề xuất nghiệp vụ — sẽ quyết ở Giai đoạn 2–3
+## C. Đề xuất nghiệp vụ — đã áp dụng phương án mặc định ở Giai đoạn 3 (chờ phường xác nhận)
 
-| #   | Vấn đề                                                                                          | Đề xuất                                                                         |
-| --- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| D1  | "Tối đa 24 kỳ" (Mục 5.1) mâu thuẫn nghiệm thu GĐ3 cần 36 kỳ (12 tháng × 3 đơn vị)               | Giới hạn 24 kỳ **cho mỗi đơn vị**                                               |
-| D2  | Tiến độ cộng dồn tính nút không có việc (Quy chế, Phụ lục) là 0% → nhánh không bao giờ đạt 100% | Bỏ nút không có việc trong cả cây con khỏi phép trung bình; bỏ việc `CANCELLED` |
-| D3  | Mốc "hoàn thành" của công việc: lúc báo hoàn thành hay lúc duyệt?                               | `completedAt` = lần báo hoàn thành cuối cùng được duyệt                         |
-| D4  | Báo cáo định kỳ tự thêm thành văn bản con → hàng chục nút/năm                                   | Gom dưới một nút "Báo cáo" hoặc thêm tuỳ chọn tắt                               |
-| —   | Báo cáo hằng tháng hạn ngày 29–31 rơi vào tháng thiếu ngày                                      | Lấy ngày cuối tháng                                                             |
-| —   | Danh mục (trường, TDP…) xoá cứng hay mềm?                                                       | Dùng cờ `active` thay cho xoá                                                   |
+| #   | Vấn đề                                                                                          | Đề xuất                                                                                      |
+| --- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| D1  | "Tối đa 24 kỳ" (Mục 5.1) mâu thuẫn nghiệm thu GĐ3 cần 36 kỳ (12 tháng × 3 đơn vị)               | **Đã áp dụng**: 24 kỳ cho mỗi đơn vị mỗi lần sinh; job hằng ngày sinh tiếp                   |
+| D2  | Tiến độ cộng dồn tính nút không có việc (Quy chế, Phụ lục) là 0% → nhánh không bao giờ đạt 100% | **Đã áp dụng**: bỏ nhánh không có việc và việc đã huỷ; việc đã duyệt = 100%                  |
+| D3  | Mốc "hoàn thành" của công việc: lúc báo hoàn thành hay lúc duyệt?                               | **Đã áp dụng**: hoàn thành tính tại lúc báo hoàn thành (lần được duyệt); trả lại thì xoá mốc |
+| D4  | Báo cáo định kỳ tự thêm thành văn bản con → hàng chục nút/năm                                   | **Đã áp dụng**: tự tạo văn bản con theo đặc tả, có ô tắt "Tự thêm…" cho từng yêu cầu         |
+| —   | Báo cáo hằng tháng hạn ngày 29–31 rơi vào tháng thiếu ngày                                      | Lấy ngày cuối tháng                                                                          |
+| —   | Danh mục (trường, TDP…) xoá cứng hay mềm?                                                       | Dùng cờ `active` thay cho xoá                                                                |
 
 ## D. Ghi nhận khi làm Giai đoạn 1
 
@@ -63,3 +63,16 @@ Cột "Trạng thái": **Mặc định** = đang làm theo phương án tạm; *
 | Văn bản cấp 1–2 trong dữ liệu mẫu                                                                | Đánh dấu "Công khai nội bộ" để cán bộ thấy khung chương trình                                                                              |
 | Kéo-thả khi đang sắp theo ngày ban hành                                                          | Chỉ cho chuyển sang cha khác; sắp xếp thủ công phải chuyển về "Thứ tự thủ công"                                                            |
 | Thùng rác                                                                                        | Tạm đặt trong "Dạng danh sách › Đã xoá" (khôi phục được); trang Thùng rác chung + xoá vĩnh viễn sau 30 ngày ở GĐ5                          |
+
+## F. Ghi nhận khi làm Giai đoạn 3
+
+| Nội dung                                                               | Cách xử lý hiện tại                                                                                                     |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Việc đã báo hoàn thành nhưng người giao chưa duyệt, có tính "quá hạn"? | Không — xét theo lúc báo hoàn thành; hiển thị "Chờ duyệt hoàn thành"                                                    |
+| Trả lại công việc                                                      | Về "Đang thực hiện", tiến độ về mức của lần cập nhật gần nhất (tối đa 90%)                                              |
+| Ai duyệt gia hạn ("gửi lãnh đạo")                                      | Người giao việc (và LEADER/ADMIN) — theo quyền "Duyệt hoàn thành / gia hạn" Mục 12                                      |
+| Giao việc chỉ cho đơn vị (không chọn cá nhân)                          | Thông báo gửi mọi tài khoản của đơn vị đó                                                                               |
+| Danh sách công việc của OFFICER / PARTY_ADMIN                          | OFFICER: việc mình/đơn vị mình chủ trì/phối hợp + việc mình giao; PARTY_ADMIN: việc mình + việc mình giao               |
+| "Việc của tôi" hiện kỳ báo cáo nào                                     | Kỳ chưa nộp của đơn vị mình, quá hạn hoặc hạn trong 45 ngày tới                                                         |
+| Ngày gửi báo cáo                                                       | Không được sau hôm nay; nộp sau hạn → "Đã nộp trễ"                                                                      |
+| Sửa yêu cầu báo cáo                                                    | Kỳ đã nộp/đã quá hạn giữ nguyên; kỳ tương lai chưa nộp sinh lại theo quy tắc mới; đơn vị bị bỏ → xoá kỳ chưa nộp của họ |

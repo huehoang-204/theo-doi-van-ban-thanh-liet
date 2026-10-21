@@ -10,6 +10,8 @@ import type { CurrentUser } from "@/server/auth/current-user";
 import { documentResourceOf } from "@/server/documents/queries";
 import { getSetting } from "@/server/queries/catalog";
 import { putFile, removeFile, storageKeyFor } from "@/server/storage";
+import { periodScopeWhere } from "@/server/reports/queries";
+import { taskResourceOf, taskScopeWhere } from "@/server/tasks/queries";
 
 export type UploadOutcome =
   | { ok: true; attachment: { id: string; fileName: string; sizeBytes: number; mimeType: string } }
@@ -39,7 +41,7 @@ export async function documentForAccess(documentId: string) {
 export async function saveAttachment(
   user: CurrentUser,
   ip: string | null,
-  documentId: string,
+  owner: AttachmentOwner,
   file: File,
 ): Promise<UploadOutcome> {
   const maxMB = await getSetting("maxUploadMB", 20);
@@ -64,7 +66,9 @@ export async function saveAttachment(
       const created = await tx.attachment.create({
         data: {
           id,
-          documentId,
+          documentId: owner.documentId,
+          taskUpdateId: owner.taskUpdateId ?? null,
+          submissionId: owner.submissionId ?? null,
           fileName: file.name.slice(0, 255),
           storageKey,
           mimeType: detected.mimeType,
@@ -77,7 +81,7 @@ export async function saveAttachment(
         action: "CREATE",
         entity: "Attachment",
         entityId: id,
-        after: { documentId, fileName: created.fileName, sizeBytes: created.sizeBytes },
+        after: { ...owner, fileName: created.fileName, sizeBytes: created.sizeBytes },
       });
       return created;
     });
@@ -104,4 +108,78 @@ export async function canEditDocument(user: CurrentUser, documentId: string): Pr
 export async function canViewDocument(user: CurrentUser, documentId: string): Promise<boolean> {
   const doc = await documentForAccess(documentId);
   return !!doc && !doc.deletedAt && can(user, "document.view", documentResourceOf(doc));
+}
+
+// ---------------------------------------------------------------- Chủ sở hữu tệp: văn bản / minh chứng / bản nộp báo cáo
+
+export type AttachmentOwner = {
+  documentId: string | null;
+  taskUpdateId?: string;
+  submissionId?: string;
+};
+
+/**
+ * Xác định nơi gắn tệp tải lên và kiểm tra quyền ghi:
+ *  - documentId: sửa được văn bản
+ *  - taskUpdateId (minh chứng tiến độ): được cập nhật tiến độ công việc đó
+ *  - submissionId (tệp báo cáo): được nộp báo cáo cho đơn vị; tệp gắn luôn vào văn bản con tự tạo
+ */
+export async function resolveUploadOwner(
+  user: CurrentUser,
+  target: {
+    documentId?: string | null;
+    taskUpdateId?: string | null;
+    submissionId?: string | null;
+  },
+): Promise<AttachmentOwner | null> {
+  if (target.taskUpdateId) {
+    const update = await db.taskUpdate.findUnique({
+      where: { id: target.taskUpdateId },
+      include: { task: true },
+    });
+    if (!update || update.task.deletedAt) return null;
+    const allowed =
+      update.userId === user.id || can(user, "task.updateProgress", taskResourceOf(update.task));
+    return allowed ? { documentId: null, taskUpdateId: update.id } : null;
+  }
+  if (target.submissionId) {
+    const sub = await db.reportSubmission.findUnique({
+      where: { id: target.submissionId },
+      include: { period: true },
+    });
+    if (!sub || !can(user, "report.submit", { departmentId: sub.period.departmentId })) return null;
+    return { documentId: sub.linkedDocumentId, submissionId: sub.id };
+  }
+  if (target.documentId && (await canEditDocument(user, target.documentId)))
+    return { documentId: target.documentId };
+  return null;
+}
+
+/** Quyền xem tệp theo chủ sở hữu */
+export async function canViewAttachment(
+  user: CurrentUser,
+  a: { documentId: string | null; taskUpdateId: string | null; submissionId: string | null },
+): Promise<boolean> {
+  if (a.documentId && (await canViewDocument(user, a.documentId))) return true;
+  if (a.taskUpdateId) {
+    const scope = taskScopeWhere(user);
+    const found = await db.task.findFirst({
+      where: {
+        updates: { some: { id: a.taskUpdateId } },
+        deletedAt: null,
+        ...(scope ? { AND: [scope] } : {}),
+      },
+      select: { id: true },
+    });
+    if (found) return true;
+  }
+  if (a.submissionId) {
+    const scope = periodScopeWhere(user);
+    const found = await db.reportPeriod.findFirst({
+      where: { submission: { id: a.submissionId }, ...(scope ? { AND: [scope] } : {}) },
+      select: { id: true },
+    });
+    if (found) return true;
+  }
+  return false;
 }

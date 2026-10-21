@@ -5,12 +5,12 @@ import { db } from "@/lib/db";
 import { isPreviewable } from "@/lib/file-type";
 import { apiUser } from "@/server/auth/api";
 import { clientIp } from "@/server/auth/current-user";
-import { canEditDocument, canViewDocument } from "@/server/documents/files";
+import { canEditDocument, canViewAttachment } from "@/server/documents/files";
 import { fileStream } from "@/server/storage";
 
 async function findAttachment(id: string) {
   const a = await db.attachment.findUnique({ where: { id } });
-  return a && !a.deletedAt && a.documentId ? a : null;
+  return a && !a.deletedAt ? a : null;
 }
 
 function contentDisposition(kind: "inline" | "attachment", fileName: string) {
@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
   if (user instanceof Response) return user;
   const { id } = await params;
   const attachment = await findAttachment(id);
-  if (!attachment || !(await canViewDocument(user, attachment.documentId!))) {
+  if (!attachment || !(await canViewAttachment(user, attachment))) {
     return Response.json(
       { message: "Không tìm thấy tệp hoặc bạn không có quyền xem." },
       { status: 404 },
@@ -73,7 +73,12 @@ export async function DELETE(request: Request, { params }: RouteContext<"/api/fi
   if (user instanceof Response) return user;
   const { id } = await params;
   const attachment = await findAttachment(id);
-  if (!attachment || !(await canEditDocument(user, attachment.documentId!))) {
+  if (
+    !attachment ||
+    !attachment.documentId ||
+    attachment.taskUpdateId ||
+    !(await canEditDocument(user, attachment.documentId))
+  ) {
     return Response.json(
       { message: "Không tìm thấy tệp hoặc bạn không có quyền xoá." },
       { status: 404 },

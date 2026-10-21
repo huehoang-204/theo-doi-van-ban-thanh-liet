@@ -40,6 +40,8 @@ describe("bảng phân quyền Mục 12 — quyền không phụ thuộc đối 
   });
 
   it("Giao việc", () => expectRow("task.assign", [true, true, true, false, true, false]));
+  it("Mở khoá bản nộp báo cáo quá 24 giờ: ADMIN, LEADER", () =>
+    expectRow("report.unlock", [true, true, false, false, false, false]));
   it("Tạo yêu cầu báo cáo", () =>
     expectRow("report.createRequirement", [true, true, true, false, true, false]));
 

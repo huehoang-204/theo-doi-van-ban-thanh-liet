@@ -460,7 +460,7 @@ function TreeRow({ node, selectedId, drag, sorted }: RowProps) {
                   ({VALIDITY_LABELS[node.validity]})
                 </span>
               )}
-              {node.progress > 0 && (
+              {node.progress !== null && (
                 <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
                   {node.progress}%
                 </span>

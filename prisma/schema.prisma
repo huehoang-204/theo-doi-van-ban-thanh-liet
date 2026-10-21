@@ -187,7 +187,7 @@ model DocumentNode {
   coDepartmentIds   String[]
   isInternalPublic  Boolean        @default(false) // "Công khai nội bộ" — OFFICER xem được (Mục 12)
 
-  progressCache        Int     @default(0) // % cộng dồn, cập nhật khi task/child đổi
+  progressCache        Int? // % cộng dồn (Mục 3.4); null = nhánh chưa có việc nào — tính ở src/server/documents/progress.ts
   hasOverdueDescendant Boolean @default(false)
   searchText           String  @default("") // bỏ dấu + chữ thường của number/title/summary/tags (src/lib/text.ts)
 
@@ -301,6 +301,7 @@ model Task {
   flow             TaskFlow        @default(NEW)
   progress         Int             @default(0)
   completedAt      DateTime?
+  submittedAt      DateTime? // lần báo hoàn thành gần nhất (chờ duyệt); khi duyệt → completedAt (D3)
   updates          TaskUpdate[]
   extensions       TaskExtension[]
   isSample         Boolean         @default(false)
@@ -321,6 +322,7 @@ model TaskUpdate {
   userId      String
   user        User         @relation(fields: [userId], references: [id])
   progress    Int
+  kind        String       @default("PROGRESS") // PROGRESS | ASSIGN | SUBMIT | APPROVE | RETURN | EXTENSION_REQUEST | EXTENSION_DECISION | CANCEL | EDIT
   content     String
   attachments Attachment[]
   createdAt   DateTime     @default(now())
@@ -379,6 +381,7 @@ model ReportRequirement {
   followerUserId    String?
   followerUser      User?           @relation(fields: [followerUserId], references: [id], onDelete: SetNull)
   active            Boolean         @default(true)
+  autoCreateChild   Boolean         @default(true) // nộp báo cáo → tự thêm văn bản con nếu cây còn chỗ (QT-03, D4)
   periods           ReportPeriod[]
   isSample          Boolean         @default(false)
   createdAt         DateTime        @default(now())
@@ -388,16 +391,16 @@ model ReportRequirement {
 }
 
 model ReportPeriod {
-  id            String             @id @default(cuid())
+  id            String            @id @default(cuid())
   requirementId String
-  requirement   ReportRequirement  @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  requirement   ReportRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
   label         String // "Tháng 10/2026", "Quý III/2026", "6 tháng đầu năm 2026", "Năm 2026"
-  periodStart   DateTime           @db.Date
-  periodEnd     DateTime           @db.Date
-  dueDate       DateTime           @db.Date
+  periodStart   DateTime          @db.Date
+  periodEnd     DateTime          @db.Date
+  dueDate       DateTime          @db.Date
   departmentId  String
-  department    Department         @relation(fields: [departmentId], references: [id])
-  submissions   ReportSubmission[]
+  department    Department        @relation(fields: [departmentId], references: [id])
+  submission    ReportSubmission?
 
   @@unique([requirementId, periodStart, departmentId])
   @@index([dueDate])
@@ -406,7 +409,7 @@ model ReportPeriod {
 
 model ReportSubmission {
   id               String        @id @default(cuid())
-  periodId         String
+  periodId         String        @unique // mỗi kỳ (một đơn vị) một bản nộp
   period           ReportPeriod  @relation(fields: [periodId], references: [id], onDelete: Cascade)
   number           String?
   sentDate         DateTime      @db.Date
@@ -416,10 +419,9 @@ model ReportSubmission {
   linkedDocumentId String? // văn bản con tự tạo
   linkedDocument   DocumentNode? @relation(fields: [linkedDocumentId], references: [id], onDelete: SetNull)
   attachments      Attachment[]
-  lockedAt         DateTime?
+  unlockedAt       DateTime? // LEADER/ADMIN mở khoá → sửa được thêm 24 giờ
   createdAt        DateTime      @default(now())
-
-  @@index([periodId])
+  updatedAt        DateTime      @updatedAt
 }
 
 // ===================== ĐỊA BÀN =====================

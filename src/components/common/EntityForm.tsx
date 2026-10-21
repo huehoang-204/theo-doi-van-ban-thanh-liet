@@ -61,6 +61,8 @@ export type CustomFieldProps = {
   invalid: boolean;
   describedBy?: string;
   labelId: string;
+  /** Giá trị hiện tại của cả form (VD để xem trước kết quả) */
+  values: FormValues;
 };
 
 type EntityFormProps<T> = {
@@ -247,6 +249,7 @@ export function EntityForm<T>({
                         invalid: !!error,
                         describedBy,
                         labelId: `${id}-label`,
+                        values,
                       })}
                     </>
                   )}
