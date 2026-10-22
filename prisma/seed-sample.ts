@@ -414,6 +414,46 @@ const TREE: NodeInput[] = [
       },
     ],
   },
+  {
+    type: "CTr",
+    title: "Chương trình công tác an sinh xã hội năm 2026",
+    agency: "UBND phường Thanh Liệt",
+    issued: "2026-03-02",
+    lead: "Phòng Văn hóa – Xã hội",
+    field: "Văn hóa – Xã hội",
+    children: [
+      {
+        type: "KH",
+        number: "52/KH-UBND",
+        title: "Kế hoạch tổ chức Ngày hội Đại đoàn kết toàn dân tộc năm 2026",
+        field: "Văn hóa – Xã hội",
+        agency: "UBND phường Thanh Liệt",
+        issued: "2026-10-08",
+        lead: "Phòng Văn hóa – Xã hội",
+        tags: ["đại đoàn kết"],
+        children: [
+          {
+            type: "TB",
+            number: "27/TB-UBND",
+            title: "Phân công các tổ dân phố tham gia Ngày hội Đại đoàn kết",
+            field: "Văn hóa – Xã hội",
+            agency: "UBND phường Thanh Liệt",
+            issued: "2026-10-14",
+          },
+        ],
+      },
+      {
+        type: "CV",
+        number: "118/UBND-VHXH",
+        title: "Rà soát hộ nghèo, hộ cận nghèo năm 2026",
+        field: "Văn hóa – Xã hội",
+        agency: "UBND phường Thanh Liệt",
+        issued: "2026-10-16",
+        lead: "Phòng Văn hóa – Xã hội",
+        tags: ["hộ nghèo"],
+      },
+    ],
+  },
 ];
 
 async function seedDocuments(db: Db, createdById: string) {
@@ -478,7 +518,7 @@ async function seedPublishing(db: Db, users: Record<string, string>, docs: Recor
     {
       number: "45/QĐ-UBND",
       by: users.vanthu!,
-      at: "2026-10-20T14:17:00+07:00",
+      at: new Date("2026-10-20T14:17:00+07:00"),
       all: true,
       departments: [] as string[],
       direct: [] as string[],
@@ -488,7 +528,7 @@ async function seedPublishing(db: Db, users: Record<string, string>, docs: Recor
     {
       number: "88/UBND-VP",
       by: users.vanthu!,
-      at: "2026-10-19T09:30:00+07:00",
+      at: new Date("2026-10-19T09:30:00+07:00"),
       all: false,
       departments: [dept("Phòng Kinh tế, Hạ tầng và Đô thị"), dept("Phòng Văn hóa – Xã hội")],
       direct: [users.totruong1!],
@@ -498,16 +538,47 @@ async function seedPublishing(db: Db, users: Record<string, string>, docs: Recor
     {
       number: "20/KH-UBND",
       by: users.chutich!,
-      at: "2026-10-21T08:00:00+07:00",
+      at: new Date("2026-10-21T08:00:00+07:00"),
       all: false,
       departments: [dept("Phòng Kinh tế, Hạ tầng và Đô thị")],
       direct: [] as string[],
       message: null,
     },
+    // Văn bản ban hành gần đây (tính theo ngày chạy seed) — trang "Mới ban hành" có nhiều ngày
+    {
+      number: "52/KH-UBND",
+      by: users.chutich!,
+      at: atHour(-6, 10, 5),
+      all: true,
+      departments: [] as string[],
+      direct: [] as string[],
+      message:
+        "Kính gửi: Các đơn vị, tổ dân phố.\nUBND phường ban hành Kế hoạch tổ chức Ngày hội Đại đoàn kết toàn dân tộc năm 2026. Đề nghị các đơn vị chủ động phối hợp tổ chức.",
+    },
+    {
+      number: "27/TB-UBND",
+      by: users.vanthu!,
+      at: atHour(-3, 8, 30),
+      all: false,
+      departments: [dept("Văn phòng HĐND và UBND"), dept("Phòng Văn hóa – Xã hội")],
+      direct: [users.totruong1!],
+      message:
+        "Kính gửi: các đơn vị liên quan.\nThông báo phân công các tổ dân phố tham gia Ngày hội.",
+    },
+    {
+      number: "118/UBND-VHXH",
+      by: users.vanthu!,
+      at: atHour(-1, 15, 40),
+      all: false,
+      departments: [dept("Phòng Văn hóa – Xã hội"), dept("Phòng Kinh tế, Hạ tầng và Đô thị")],
+      direct: [] as string[],
+      message:
+        "Kính gửi: Phòng Văn hóa – Xã hội; Phòng Kinh tế, Hạ tầng và Đô thị.\nĐề nghị phối hợp rà soát hộ nghèo, hộ cận nghèo, gửi kết quả trước ngày 15/11/2026.",
+    },
   ];
   for (const it of items) {
     const id = docs[it.number]!;
-    const at = new Date(it.at);
+    const at = it.at;
     const doc = await db.documentNode.update({
       where: { id },
       data: {
@@ -578,6 +649,38 @@ async function seedPublishing(db: Db, users: Record<string, string>, docs: Recor
     },
   });
   await db.documentFollow.create({ data: { documentId: d88, userId: users.canbo1! } });
+
+  const d52 = docs["52/KH-UBND"]!;
+  await db.documentView.createMany({
+    data: [users.canbo1!, users.canbo2!, users.bithu!, users.xaydungdang!].map((userId, i) => ({
+      documentId: d52,
+      userId,
+      firstViewedAt: atHour(-6 + Math.min(i, 2), 14, 10 * i),
+      lastViewedAt: atHour(-6 + Math.min(i, 2), 14, 10 * i),
+    })),
+  });
+  for (const [i, c] of [
+    [
+      users.canbo2!,
+      "Phòng Văn hóa – Xã hội đề xuất tổ chức tại sân Nhà văn hóa phường, dự kiến 300 người tham dự.",
+    ],
+    [users.xaydungdang!, "Đề nghị các chi bộ khu dân cư vận động đảng viên tham gia đầy đủ."],
+    [users.chutich!, "Đồng ý phương án. Văn phòng tổng hợp kinh phí trình trước ngày 05/11."],
+  ].entries()) {
+    await db.documentComment.create({
+      data: {
+        documentId: d52,
+        userId: c[0]!,
+        content: c[1]!,
+        createdAt: atHour(-5 + i, 9 + i, 15),
+      },
+    });
+    await db.documentFollow.upsert({
+      where: { documentId_userId: { documentId: d52, userId: c[0]! } },
+      update: {},
+      create: { documentId: d52, userId: c[0]! },
+    });
+  }
   return items.length;
 }
 
@@ -762,6 +865,206 @@ async function seedTasks(db: Db, users: Record<string, string>, docs: Record<str
   return n;
 }
 
+// ---------------------------------------------------------------- Lịch sử 6 tháng cho biểu đồ (thiết kế lại Bảng điều hành)
+
+/** Mốc giờ VN của ngày cách hôm nay n ngày */
+function atHour(n: number, hour: number, minute = 0): Date {
+  return new Date(dayFromToday(n).getTime() + ((hour - 7) * 60 + minute) * 60_000);
+}
+
+/** ~70 công việc rải 6 tháng gần đây: đa số đã xong (đúng hạn/trễ), một ít huỷ hoặc còn mở */
+async function seedTaskHistory(
+  db: Db,
+  users: Record<string, string>,
+  docs: Record<string, string>,
+) {
+  // Việc mẫu cũ được tạo cùng lúc lúc chạy seed → đặt ngày giao theo ngày bắt đầu (không ở tương lai)
+  const existing = await db.task.findMany({
+    where: { isSample: true },
+    select: { id: true, startDate: true },
+  });
+  for (const t of existing) {
+    const start =
+      t.startDate && t.startDate < dayFromToday(-1) ? t.startDate : dayFromToday(-between(1, 5));
+    await db.task.update({
+      where: { id: t.id },
+      data: { createdAt: new Date(start.getTime() + 3600_000) },
+    });
+  }
+
+  const depts = await Promise.all(
+    [
+      "Phòng Kinh tế, Hạ tầng và Đô thị",
+      "Phòng Văn hóa – Xã hội",
+      "Văn phòng HĐND và UBND",
+      "Trung tâm Phục vụ hành chính công",
+      "Văn phòng Đảng ủy",
+    ].map((n) => deptId(db, n)),
+  );
+  const people: Record<string, string | null> = {
+    [depts[0]!]: users.canbo1!,
+    [depts[1]!]: users.canbo2!,
+  };
+  const docPool = [
+    docs["12/KH-UBND"],
+    docs["45/QĐ-UBND"],
+    docs["88/UBND-VP"],
+    docs["20/KH-UBND"],
+    docs["52/KH-UBND"],
+    docs["118/UBND-VHXH"],
+    null,
+  ];
+  const titles = [
+    "Kiểm tra vệ sinh an toàn thực phẩm bếp ăn tập thể",
+    "Tổng hợp kết quả thu ngân sách tháng",
+    "Rà soát đối tượng hưởng trợ cấp xã hội",
+    "Cập nhật dữ liệu dân cư lên hệ thống định danh",
+    "Xử lý phản ánh về lấn chiếm vỉa hè",
+    "Chuẩn bị hồ sơ đại hội chi bộ khu dân cư",
+    "Tiếp nhận, trả kết quả hồ sơ đất đai tồn đọng",
+    "Đôn đốc hoàn thiện hồ sơ cấp giấy chứng nhận",
+    "Tuyên truyền phòng chống dịch sốt xuất huyết",
+    "Kiểm kê tài sản công cuối kỳ",
+    "Tổ chức hội nghị đối thoại với người dân",
+    "Rà soát điểm trông giữ xe tự phát",
+    "Hướng dẫn tổ dân phố bầu bổ sung tổ trưởng",
+    "Lập dự toán sửa chữa nhà văn hóa",
+  ];
+  const assigners = [users.chutich!, users.bithu!, users.vanthu!];
+  // Số việc giao theo từng "tháng" lùi về trước (0 = 30 ngày gần nhất)
+  const perBucket = [12, 14, 10, 13, 11, 9];
+  let n = 0;
+  for (const [bucket, count] of perBucket.entries()) {
+    for (let k = 0; k < count; k++) {
+      const ago = between(bucket * 30 + 2, bucket * 30 + 28);
+      const dueIn = between(10, 35);
+      const dueOffset = -ago + dueIn; // so với hôm nay
+      const dept = depts[n % depts.length]!;
+      let flow: "NEW" | "IN_PROGRESS" | "DONE" | "CANCELLED" = "IN_PROGRESS";
+      let progress = between(1, 8) * 10;
+      let doneOffset: number | null = null;
+      if (dueOffset < 0) {
+        const r = rand();
+        if (r < 0.72) {
+          flow = "DONE";
+          doneOffset = Math.max(-ago + 2, dueOffset - between(0, 6));
+        } else if (r < 0.88 || ago > 60) {
+          flow = "DONE";
+          doneOffset = Math.min(-1, dueOffset + between(1, 8));
+        } else if (r < 0.94) {
+          flow = "CANCELLED";
+        }
+        // còn lại: quá hạn, chưa xong
+      } else if (rand() < 0.15) {
+        flow = "NEW";
+        progress = 0;
+      }
+      if (flow === "DONE") progress = 100;
+      const doneAt = doneOffset === null ? null : atHour(doneOffset, 16, between(0, 59));
+      await db.task.create({
+        data: {
+          title: `${titles[n % titles.length]} (mẫu)`,
+          description: "Công việc minh hoạ dữ liệu 6 tháng cho Bảng điều hành.",
+          documentId: docPool[n % docPool.length] ?? null,
+          assignerId: assigners[n % assigners.length]!,
+          leadDepartmentId: dept,
+          leadUserId: people[dept] ?? null,
+          coDepartmentIds: [],
+          coUserIds: [],
+          startDate: dayFromToday(-ago),
+          dueDate: dayFromToday(dueOffset),
+          priority: pick(["NORMAL", "NORMAL", "NORMAL", "HIGH", "LOW"] as const),
+          flow,
+          progress,
+          completedAt: doneAt,
+          submittedAt: doneAt,
+          createdAt: atHour(-ago, 8, between(0, 59)),
+          isSample: true,
+        },
+      });
+      n++;
+    }
+  }
+  return n;
+}
+
+/** Thêm 2 yêu cầu báo cáo (hằng tháng, theo quý) có kỳ nộp đúng hạn / trễ / quá hạn */
+async function seedMoreReports(
+  db: Db,
+  users: Record<string, string>,
+  docs: Record<string, string>,
+) {
+  const recipient = await db.issuingAgency.findUnique({ where: { name: "UBND thành phố Hà Nội" } });
+  const defs = [
+    {
+      // Không gắn vào 20/KH-UBND — e2e GĐ3 dùng văn bản đó để kiểm "36 kỳ"
+      documentId: docs["52/KH-UBND"]!,
+      name: "Báo cáo tình hình kinh tế – xã hội hằng tháng",
+      frequency: "MONTHLY" as const,
+      dueDayOfPeriod: 25,
+      dueMonthOffset: 0,
+      startDate: date("2026-04-01"),
+      depts: [
+        "Phòng Kinh tế, Hạ tầng và Đô thị",
+        "Phòng Văn hóa – Xã hội",
+        "Văn phòng HĐND và UBND",
+        "Công an phường",
+      ],
+    },
+    {
+      documentId: docs["12/KH-UBND"]!,
+      name: "Báo cáo công tác cải cách hành chính quý",
+      frequency: "QUARTERLY" as const,
+      dueDayOfPeriod: 15,
+      dueMonthOffset: 1,
+      startDate: date("2026-01-01"),
+      depts: ["Văn phòng HĐND và UBND", "Trung tâm Phục vụ hành chính công"],
+    },
+  ];
+  let total = 0;
+  for (const d of defs) {
+    const req = await db.reportRequirement.create({
+      data: {
+        documentId: d.documentId,
+        name: d.name,
+        frequency: d.frequency,
+        dueDayOfPeriod: d.dueDayOfPeriod,
+        dueMonthOffset: d.dueMonthOffset,
+        startDate: d.startDate,
+        endDate: date("2026-12-31"),
+        recipientAgencyId: recipient?.id,
+        departmentIds: await Promise.all(d.depts.map((n) => deptId(db, n))),
+        followerUserId: users.vanthu!,
+        autoCreateChild: false,
+        isSample: true,
+      },
+    });
+    total += await createMissingPeriods(db, req);
+    const past = await db.reportPeriod.findMany({
+      where: { requirementId: req.id, dueDate: { lt: dayFromToday(0) } },
+      orderBy: { dueDate: "asc" },
+    });
+    for (const p of past) {
+      const daysAgo = Math.round((dayFromToday(0).getTime() - p.dueDate.getTime()) / 86_400_000);
+      const r = rand();
+      // Kỳ gần đây (≤ 60 ngày) có thể chưa nộp → quá hạn; kỳ cũ hầu hết đã nộp
+      if (daysAgo <= 60 && r > 0.8) continue;
+      const late = r > 0.62;
+      const sent = late ? -daysAgo + between(1, 6) : -daysAgo - between(0, 4);
+      await db.reportSubmission.create({
+        data: {
+          periodId: p.id,
+          number: `${p.label.replace(/\D+/g, "").slice(0, 4) || "1"}/BC-${between(10, 99)}`,
+          sentDate: dayFromToday(Math.min(0, sent)),
+          submittedById: users.vanthu!,
+          createdAt: atHour(Math.min(0, sent), 10),
+        },
+      });
+    }
+  }
+  return total;
+}
+
 export async function seedSample(db: Db) {
   if (await db.user.findFirst({ where: { isSample: true } })) {
     console.log(
@@ -777,13 +1080,15 @@ export async function seedSample(db: Db) {
   const report = await seedReportRequirement(db, byNumber["88/UBND-VP"]!, users.vanthu!);
   const taskCount = await seedTasks(db, users, byNumber);
   const published = await seedPublishing(db, users, byNumber);
+  const history = await seedTaskHistory(db, users, byNumber);
+  const morePeriods = await seedMoreReports(db, users, byNumber);
   await recomputeAllTrees(db); // tiến độ cộng dồn & chấm đỏ trên cây (Mục 3.4)
 
   const population = residentials.reduce((s, r) => s + (r.population ?? 0), 0);
   console.log(
     `✔ Dữ liệu mẫu: ${SAMPLE_USERS.length} người dùng (mật khẩu ${SAMPLE_PASSWORD}), ${schools.length} trường, ` +
       `${residentials.length} TDP (tổng ${population.toLocaleString("vi-VN")} nhân khẩu), ${partyCount} tổ chức đảng, ` +
-      `${docCount} văn bản (${published} đã ban hành), 1 yêu cầu báo cáo (${report.periods} kỳ, đã nộp ${report.submitted}), ${taskCount} công việc.`,
+      `${docCount} văn bản (${published} đã ban hành), 3 yêu cầu báo cáo (${report.periods + morePeriods} kỳ), ${taskCount + history} công việc (rải 6 tháng).`,
   );
 }
 
