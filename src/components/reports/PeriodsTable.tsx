@@ -41,6 +41,8 @@ export type PeriodRow = {
   editable: boolean;
   /** Quá hạn hoặc trong 60 ngày tới */
   upcoming: boolean;
+  /** Tháng của hạn nộp "YYYY-MM" — lọc từ biểu đồ bảng điều hành (?thang=) */
+  dueMonth: string;
 };
 
 type Tab = "can-nop" | "da-nop" | "tat-ca";
@@ -50,12 +52,15 @@ type Props = {
   canUnlock: boolean;
   departments: Option[];
   requirements: Option[];
-  initial: { requirement?: string; status?: string; withinDays?: number };
+  initial: { requirement?: string; status?: string; withinDays?: number; month?: string };
 };
 
 export function PeriodsTable({ rows, canUnlock, departments, requirements, initial }: Props) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>(initial.requirement || initial.status ? "tat-ca" : "can-nop");
+  const [tab, setTab] = useState<Tab>(
+    initial.requirement || initial.status || initial.month ? "tat-ca" : "can-nop",
+  );
+  const [month, setMonth] = useState<string | null>(initial.month ?? null);
   const [requirement, setRequirement] = useState(initial.requirement ?? "");
   const [department, setDepartment] = useState("");
   const [status, setStatus] = useState(initial.status ?? "");
@@ -71,9 +76,10 @@ export function PeriodsTable({ rows, canUnlock, departments, requirements, initi
           (!requirement || r.requirement.id === requirement) &&
           (!department || r.department.id === department) &&
           (!status || r.status === status) &&
-          (withinDays === null || (!r.submission && r.daysLeft <= withinDays)),
+          (withinDays === null || (!r.submission && r.daysLeft <= withinDays)) &&
+          (!month || r.dueMonth === month),
       ),
-    [rows, tab, requirement, department, status, withinDays],
+    [rows, tab, requirement, department, status, withinDays, month],
   );
 
   const columns = useMemo<ColumnDef<PeriodRow, unknown>[]>(
@@ -270,6 +276,19 @@ export function PeriodsTable({ rows, canUnlock, departments, requirements, initi
           </button>
         ))}
       </div>
+      {month && (
+        <p className="flex w-fit items-center gap-2 rounded-full bg-brand-soft px-3 py-1 font-medium text-brand">
+          Hạn nộp trong tháng {month.split("-").reverse().join("/")}
+          <button
+            type="button"
+            className="rounded-full px-1 hover:bg-white"
+            onClick={() => setMonth(null)}
+            aria-label="Bỏ lọc theo tháng"
+          >
+            ✕
+          </button>
+        </p>
+      )}
       {withinDays !== null && (
         <p className="flex w-fit items-center gap-2 rounded-full bg-brand-soft px-3 py-1 font-medium text-brand">
           Chưa nộp, hạn trong {withinDays} ngày tới (gồm cả quá hạn)

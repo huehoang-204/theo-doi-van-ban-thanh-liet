@@ -30,6 +30,9 @@ export type TaskRow = {
   progress: number;
   status: DueStatus | null;
   pendingExtension: boolean;
+  /** "YYYY-MM" (giờ VN) — lọc theo tháng từ biểu đồ bảng điều hành */
+  createdMonth: string;
+  completedMonth: string | null;
 };
 
 const COLUMNS: ColumnDef<TaskRow, unknown>[] = [
@@ -116,13 +119,32 @@ type Props = {
   rows: TaskRow[];
   canAssign: boolean;
   options: TaskFormOptions;
-  initial: { status?: string; flow?: string; department?: string };
+  initial: {
+    status?: string;
+    flow?: string;
+    department?: string;
+    /** ?giao=YYYY-MM: giao trong tháng; ?xong=YYYY-MM: hoàn thành trong tháng */
+    assignedMonth?: string;
+    completedMonth?: string;
+  };
+};
+
+const monthText = (key: string) => {
+  const [y, m] = key.split("-");
+  return `${m}/${y}`;
 };
 
 export function TasksTable({ rows, canAssign, options, initial }: Props) {
   const [status, setStatus] = useState(initial.status ?? "");
   const [flow, setFlow] = useState(initial.flow ?? "");
   const [department, setDepartment] = useState(initial.department ?? "");
+  const [month, setMonth] = useState<{ kind: "giao" | "xong"; key: string } | null>(
+    initial.assignedMonth
+      ? { kind: "giao", key: initial.assignedMonth }
+      : initial.completedMonth
+        ? { kind: "xong", key: initial.completedMonth }
+        : null,
+  );
   const [assigning, setAssigning] = useState(false);
 
   const shown = useMemo(
@@ -141,10 +163,12 @@ export function TasksTable({ rows, canAssign, options, initial }: Props) {
         return (
           statusOk &&
           (!flow || r.flow === flow) &&
-          (!department || r.leadDepartmentId === department)
+          (!department || r.leadDepartmentId === department) &&
+          (!month ||
+            (month.kind === "giao" ? r.createdMonth === month.key : r.completedMonth === month.key))
         );
       }),
-    [rows, status, flow, department],
+    [rows, status, flow, department, month],
   );
 
   const sel = (
@@ -171,6 +195,20 @@ export function TasksTable({ rows, canAssign, options, initial }: Props) {
 
   return (
     <>
+      {month && (
+        <p className="mb-3 flex w-fit items-center gap-2 rounded-full bg-brand-soft px-3 py-1 font-medium text-brand">
+          {month.kind === "giao" ? "Giao trong tháng" : "Hoàn thành trong tháng"}{" "}
+          {monthText(month.key)}
+          <button
+            type="button"
+            className="rounded-full px-1 hover:bg-white"
+            onClick={() => setMonth(null)}
+            aria-label="Bỏ lọc theo tháng"
+          >
+            ✕
+          </button>
+        </p>
+      )}
       <DataTable
         columns={COLUMNS}
         data={shown}

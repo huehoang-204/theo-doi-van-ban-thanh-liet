@@ -18,7 +18,10 @@ import {
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-/** Thẻ số liệu (Mục 7.1): con số lớn 38px, nhãn rõ, dòng phụ, "Cập nhật ngày …"; cả thẻ bấm được */
+/**
+ * Thẻ số liệu gọn (Mục 7.1): nhãn + biểu tượng, con số lớn (38px trên máy tính, co theo màn hình nhỏ),
+ * tối đa một dòng phụ. Ngày cập nhật ghi ở tiêu đề khối (và trong `title` của thẻ). Cả thẻ bấm được.
+ */
 export function StatTile({
   href,
   icon: Icon,
@@ -45,35 +48,28 @@ export function StatTile({
     <Link
       href={href as never}
       data-testid={testId}
-      className="group flex min-w-0 flex-col rounded-xl border bg-card p-4 shadow-sm transition hover:border-brand/50 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:p-5 xl:p-4 2xl:p-5"
+      title={updatedAt ? `${label} — cập nhật ngày ${updatedAt}` : label}
+      className="group flex min-w-0 flex-col rounded-xl border bg-card p-3 shadow-sm transition hover:border-brand/50 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:p-4"
     >
       <span className="flex items-center gap-2 text-muted-foreground">
-        <span
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand"
-          aria-hidden
-        >
-          <Icon className="size-5" />
-        </span>
-        <span className="font-medium text-foreground">{label}</span>
-        <ChevronRight
-          className="ml-auto size-4 opacity-0 transition group-hover:opacity-100"
-          aria-hidden
-        />
+        <Icon className="size-5 shrink-0 text-brand" aria-hidden />
+        <span className="truncate font-medium text-foreground">{label}</span>
+        {note && (
+          <span className="ml-auto shrink-0 rounded bg-muted px-1.5 text-xs font-medium">
+            {note}
+          </span>
+        )}
       </span>
-      <span className="mt-3 flex flex-wrap items-baseline gap-x-1.5">
+      <span className="mt-2 flex flex-wrap items-baseline gap-x-1.5">
         <span
-          className="text-stat font-bold tracking-tight text-foreground tabular-nums"
+          className="text-[clamp(1.75rem,7.5vw,var(--text-stat))] leading-tight font-bold tracking-tight text-foreground"
           data-value
         >
           {value}
         </span>
-        {unit && <span className="text-lg font-medium text-muted-foreground">{unit}</span>}
+        {unit && <span className="font-medium text-muted-foreground">{unit}</span>}
       </span>
-      {sub && <span className="mt-1 text-muted-foreground">{sub}</span>}
-      <span className="mt-auto pt-2 text-sm text-muted-foreground">
-        {note && <span className="mr-1 font-medium text-foreground/70">{note} ·</span>}
-        {updatedAt ? `Cập nhật ngày ${updatedAt}` : "Chưa có số liệu"}
-      </span>
+      {sub && <span className="mt-0.5 truncate text-sm text-muted-foreground">{sub}</span>}
     </Link>
   );
 }
@@ -138,8 +134,8 @@ export function Panel({
         className,
       )}
     >
-      <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="text-lg font-semibold">{title}</h3>
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="min-w-0 text-lg font-semibold">{title}</h3>
         {action && (
           <Link
             href={action.href as never}

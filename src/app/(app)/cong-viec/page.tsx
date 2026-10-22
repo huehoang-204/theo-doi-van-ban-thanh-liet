@@ -11,7 +11,7 @@ import { listTasks, userOptions } from "@/server/tasks/queries";
 
 export const metadata: Metadata = { title: vi.nav.tasks };
 
-/** Danh sách công việc; tham số URL ?trangThai=QUA_HAN&buoc=SUBMITTED&donVi=<id> để dẫn từ bảng điều hành */
+/** Danh sách công việc; tham số URL ?trangThai=QUA_HAN&buoc=SUBMITTED&donVi=<id>&giao=YYYY-MM&xong=YYYY-MM để dẫn từ bảng điều hành */
 export default async function TasksPage({ searchParams }: PageProps<"/cong-viec">) {
   const user = await requirePermission("task.list");
   const params = await searchParams;
@@ -32,9 +32,12 @@ export default async function TasksPage({ searchParams }: PageProps<"/cong-viec"
         canAssign={can(user, "task.assign")}
         options={{ departments: options.departments, users }}
         initial={{
-          status: str(params.trangThai) ?? "MO",
+          // Lọc theo tháng (từ biểu đồ) mà không nêu trạng thái → mọi trạng thái
+          status: str(params.trangThai) ?? (params.giao || params.xong ? "" : "MO"),
           flow: str(params.buoc),
           department: str(params.donVi),
+          assignedMonth: str(params.giao),
+          completedMonth: str(params.xong),
         }}
       />
     </>

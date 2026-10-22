@@ -4,17 +4,21 @@ import { db } from "@/lib/db";
 import {
   countBy,
   latest,
+  monthWindow,
   overdueByDepartment,
+  reportMonthly,
   populationDensity,
   sortProgramsByProgress,
   sumBy,
+  sumByKey,
   taskBuckets,
+  taskTrend,
   upcomingReports,
   withOverride,
 } from "@/lib/dashboard";
 import { dateOnlyKey, formatDate, formatDateTime, formatLongDate, vnDateKey } from "@/lib/format";
 import { PARTY_BLOCK_LABELS, SCHOOL_LEVEL_LABELS } from "@/lib/i18n/enums";
-import { CELL_TYPES, computePartyStats } from "@/lib/party";
+import { computePartyStats } from "@/lib/party";
 import { can } from "@/lib/permissions";
 import type { DueStatus } from "@/lib/status";
 import type { CurrentUser } from "@/server/auth/current-user";
@@ -50,21 +54,12 @@ export type DashboardData = {
     population: number;
     updatedAt: string | null;
     byOldArea: { id: string; name: string; population: number; count: number }[];
-    list: {
-      id: string;
-      name: string;
-      code: number | null;
-      households: number | null;
-      population: number | null;
-      oldArea: string | null;
-    }[];
   };
   party: {
     orgs: { value: number; overridden: boolean; counted: number };
     cells: { value: number; overridden: boolean; counted: number };
     members: { value: number; overridden: boolean; counted: number };
     cellsByBlock: { block: string; label: string; count: number }[];
-    topCells: { id: string; name: string; memberCount: number }[];
     updatedAt: string | null;
   };
   education: {
@@ -75,14 +70,8 @@ export type DashboardData = {
     staff: number;
     classes: number;
     byLevel: { level: string; label: string; count: number }[];
-    schools: {
-      id: string;
-      name: string;
-      level: string;
-      staff: number | null;
-      students: number | null;
-      classes: number | null;
-    }[];
+    /** Học sinh theo cấp học (năm học đang chọn) */
+    studentsByLevel: { level: string; label: string; students: number }[];
     updatedAt: string | null;
   };
   operations: {
@@ -99,6 +88,17 @@ export type DashboardData = {
       requirementId: string;
     }[];
     programs: { id: string; title: string; progress: number | null; hasOverdue: boolean }[];
+    /** 6 tháng gần nhất: công việc giao mới & hoàn thành */
+    trend: { key: string; label: string; assigned: number; done: number }[];
+    /** 6 tháng gần nhất theo tháng của hạn nộp */
+    reportMonths: {
+      key: string;
+      label: string;
+      onTime: number;
+      late: number;
+      overdue: number;
+      pending: number;
+    }[];
     newDocuments: {
       id: string;
       number: string | null;
@@ -167,9 +167,6 @@ export async function getDashboard(
 
   const area = ward ? Number(ward.areaKm2) : 0;
   const party = computePartyStats(partyOrgs);
-  const partyChildren = new Set(
-    partyOrgs.filter((o) => o.active && o.parentId).map((o) => o.parentId!),
-  );
   const anyOverride =
     ward &&
     [ward.partyOrgCountOverride, ward.partyCellCountOverride, ward.partyMemberCountOverride].some(
@@ -205,14 +202,6 @@ export async function getDashboard(
           };
         })
         .filter((a) => a.count > 0),
-      list: residentials.map((r) => ({
-        id: r.id,
-        name: r.name,
-        code: r.code,
-        households: r.households,
-        population: r.population,
-        oldArea: r.oldArea?.name ?? null,
-      })),
     },
     party: {
       orgs: {
@@ -234,11 +223,6 @@ export async function getDashboard(
           count: count ?? 0,
         }))
         .sort((a, b) => b.count - a.count),
-      topCells: partyOrgs
-        .filter((o) => o.active && CELL_TYPES.includes(o.type) && !partyChildren.has(o.id))
-        .sort((a, b) => b.memberCount - a.memberCount)
-        .slice(0, 5)
-        .map((o) => ({ id: o.id, name: o.name, memberCount: o.memberCount })),
       updatedAt: fmt(
         latest([...partyOrgs.map((o) => o.updatedAt), anyOverride ? ward?.updatedAt : null]),
       ),
@@ -259,14 +243,12 @@ export async function getDashboard(
         label: SCHOOL_LEVEL_LABELS[x.key],
         count: x.count,
       })),
-      schools: schools.map((s) => ({
-        id: s.id,
-        name: s.name,
-        level: SCHOOL_LEVEL_LABELS[s.level],
-        staff: stat(s)?.staffTotal ?? null,
-        students: stat(s)?.students ?? null,
-        classes: stat(s)?.classes ?? null,
-      })),
+      studentsByLevel: sumByKey(
+        schools,
+        (s) => s.level,
+        (s) => stat(s)?.students,
+        Object.keys(SCHOOL_LEVEL_LABELS) as (keyof typeof SCHOOL_LEVEL_LABELS)[],
+      ).map((x) => ({ level: x.key, label: SCHOOL_LEVEL_LABELS[x.key], students: x.value })),
       updatedAt: fmt(
         latest([...schools.map((s) => s.updatedAt), ...schools.map((s) => stat(s)?.updatedAt)]),
       ),
@@ -281,38 +263,45 @@ export async function getDashboard(
     const todayKey = vnDateKey(now);
     const in14 = new Date(Date.parse(`${todayKey}T00:00:00Z`) + 14 * 86_400_000);
     const docScope = await documentScope(user);
-    const [tasks, dueSoonDays, periods, programs, docs, departments] = await Promise.all([
-      db.task.findMany({
-        where: { deletedAt: null, ...(scope ? { AND: [scope] } : {}) },
-        select: {
-          flow: true,
-          dueDate: true,
-          completedAt: true,
-          submittedAt: true,
-          leadDepartmentId: true,
-        },
-      }),
-      getDueSoonDays(),
-      listPeriods(user, { submission: null, dueDate: { lte: in14 } }),
-      listChildren(user, null),
-      db.documentNode.findMany({
-        where: {
-          deletedAt: null,
-          issuedDate: { not: null },
-          ...(docScope ? { id: { in: [...docScope.direct] } } : {}),
-        },
-        orderBy: [{ issuedDate: "desc" }, { createdAt: "desc" }],
-        take: 10,
-        select: {
-          id: true,
-          number: true,
-          title: true,
-          issuedDate: true,
-          type: { select: { name: true, color: true } },
-        },
-      }),
-      db.department.findMany({ select: { id: true, name: true } }),
-    ]);
+    const months = monthWindow(now, 6);
+    const windowStart = new Date(`${months[0]!.key}-01T00:00:00Z`);
+    const [cy, cm] = months.at(-1)!.key.split("-").map(Number) as [number, number];
+    const windowEnd = new Date(Date.UTC(cy, cm, 0)); // ngày cuối tháng hiện tại
+    const [tasks, dueSoonDays, periods, programs, docs, departments, monthPeriods] =
+      await Promise.all([
+        db.task.findMany({
+          where: { deletedAt: null, ...(scope ? { AND: [scope] } : {}) },
+          select: {
+            flow: true,
+            dueDate: true,
+            completedAt: true,
+            submittedAt: true,
+            leadDepartmentId: true,
+            createdAt: true,
+          },
+        }),
+        getDueSoonDays(),
+        listPeriods(user, { submission: null, dueDate: { lte: in14 } }),
+        listChildren(user, null),
+        db.documentNode.findMany({
+          where: {
+            deletedAt: null,
+            issuedDate: { not: null },
+            ...(docScope ? { id: { in: [...docScope.direct] } } : {}),
+          },
+          orderBy: [{ issuedDate: "desc" }, { createdAt: "desc" }],
+          take: 5,
+          select: {
+            id: true,
+            number: true,
+            title: true,
+            issuedDate: true,
+            type: { select: { name: true, color: true } },
+          },
+        }),
+        db.department.findMany({ select: { id: true, name: true } }),
+        listPeriods(user, { dueDate: { gte: windowStart, lte: windowEnd } }),
+      ]);
     const deptName = new Map(departments.map((d) => [d.id, d.name]));
     data.operations = {
       tasks: taskBuckets(tasks, now, dueSoonDays),
@@ -343,6 +332,8 @@ export async function getDashboard(
             hasOverdue: p.hasOverdue,
           })),
       ),
+      trend: taskTrend(tasks, now, 6),
+      reportMonths: reportMonthly(monthPeriods, now, 6),
       newDocuments: docs.map((d) => ({
         id: d.id,
         number: d.number,

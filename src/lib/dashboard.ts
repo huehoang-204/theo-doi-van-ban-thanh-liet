@@ -1,4 +1,5 @@
 // Tổng hợp số liệu Bảng điều hành (Mục 7.3) — hàm thuần, có unit test. Truy vấn CSDL ở src/server/dashboard.
+import { dateOnlyKey, vnDateKey } from "@/lib/format";
 import { STATUS_RANK, taskDueStatus, type DueStatus, type TaskFlow } from "@/lib/status";
 
 /** Mật độ dân số (người/km²), làm tròn; null nếu thiếu diện tích */
@@ -117,4 +118,86 @@ export function latest(dates: ReadonlyArray<Date | null | undefined>): Date | nu
   let max: Date | null = null;
   for (const d of dates) if (d && (!max || d > max)) max = d;
   return max;
+}
+
+// ---------------------------------------------------------------- Biểu đồ theo tháng (thiết kế lại 22/10/2026)
+
+export type MonthSlot = { key: string; label: string };
+
+/** N tháng gần nhất tính đến tháng hiện tại (giờ VN), cũ → mới: [{ key "2026-05", label "T5/2026" }] */
+export function monthWindow(now: Date, months = 6): MonthSlot[] {
+  const [y, m] = vnDateKey(now).split("-").map(Number) as [number, number];
+  return Array.from({ length: months }, (_, i) => {
+    const idx = y * 12 + (m - 1) - (months - 1 - i);
+    const yy = Math.floor(idx / 12);
+    const mm = (idx % 12) + 1;
+    return { key: `${yy}-${String(mm).padStart(2, "0")}`, label: `T${mm}/${yy}` };
+  });
+}
+
+/** Tháng (giờ VN) của một mốc thời gian, dạng "YYYY-MM" */
+export const vnMonthKey = (d: Date) => vnDateKey(d).slice(0, 7);
+
+/** Công việc giao mới & hoàn thành (đã duyệt) theo tháng; việc huỷ không tính */
+export function taskTrend(
+  tasks: readonly { createdAt: Date; completedAt: Date | null; flow: TaskFlow }[],
+  now: Date,
+  months = 6,
+): (MonthSlot & { assigned: number; done: number })[] {
+  const slots = monthWindow(now, months).map((s) => ({ ...s, assigned: 0, done: 0 }));
+  const at = new Map(slots.map((s) => [s.key, s]));
+  for (const t of tasks) {
+    if (t.flow === "CANCELLED") continue;
+    const a = at.get(vnMonthKey(t.createdAt));
+    if (a) a.assigned++;
+    if (t.flow === "DONE" && t.completedAt) {
+      const d = at.get(vnMonthKey(t.completedAt));
+      if (d) d.done++;
+    }
+  }
+  return slots;
+}
+
+export type ReportMonth = MonthSlot & {
+  onTime: number;
+  late: number;
+  overdue: number;
+  pending: number;
+};
+
+/** Kỳ báo cáo theo tháng của hạn nộp: đúng hạn / nộp trễ / quá hạn chưa nộp / chưa đến hạn */
+export function reportMonthly(
+  periods: readonly { dueDate: Date; status: DueStatus }[],
+  now: Date,
+  months = 6,
+): ReportMonth[] {
+  const slots = monthWindow(now, months).map((s) => ({
+    ...s,
+    onTime: 0,
+    late: 0,
+    overdue: 0,
+    pending: 0,
+  }));
+  const at = new Map(slots.map((s) => [s.key, s]));
+  for (const p of periods) {
+    const slot = at.get(dateOnlyKey(p.dueDate).slice(0, 7));
+    if (!slot) continue;
+    if (p.status === "HOAN_THANH") slot.onTime++;
+    else if (p.status === "HOAN_THANH_TRE") slot.late++;
+    else if (p.status === "QUA_HAN") slot.overdue++;
+    else slot.pending++;
+  }
+  return slots;
+}
+
+/** Cộng theo khoá, giữ thứ tự `order`, bỏ nhóm bằng 0 */
+export function sumByKey<T, K extends string>(
+  items: readonly T[],
+  key: (t: T) => K,
+  value: (t: T) => number | null | undefined,
+  order: readonly K[],
+): { key: K; value: number }[] {
+  const map = new Map<K, number>();
+  for (const it of items) map.set(key(it), (map.get(key(it)) ?? 0) + (value(it) ?? 0));
+  return order.map((k) => ({ key: k, value: map.get(k) ?? 0 })).filter((x) => x.value > 0);
 }

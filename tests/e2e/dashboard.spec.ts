@@ -83,9 +83,15 @@ test.describe("Bảng điều hành — tiêu chí nghiệm thu Giai đoạn 4",
     await expect(page.getByTestId("tile-party-cells")).not.toContainText("Số nhập tay");
     await expect(tileValue(page, "tile-party-cells")).toHaveText(vi(api.party.cells.value));
 
-    // Mọi thẻ có dòng "Cập nhật ngày …"
+    // "Cập nhật ngày …" ở tiêu đề từng khối (Mục 7.1); từng thẻ ghi trong title
+    await expect(page.getByRole("region", { name: "Số liệu địa bàn" })).toContainText(
+      /Cập nhật ngày \d{2}\/\d{2}\/\d{4}/,
+    );
     for (const id of ["tile-area", "tile-population", "tile-residentials", "tile-students"])
-      await expect(page.getByTestId(id)).toContainText(/Cập nhật ngày \d{2}\/\d{2}\/\d{4}/);
+      await expect(page.getByTestId(id)).toHaveAttribute(
+        "title",
+        /cập nhật ngày \d{2}\/\d{2}\/\d{4}/,
+      );
     await expect(page.getByTestId("tile-population")).toContainText(/Mật độ ≈ [\d.]+ người\/km²/);
   });
 
@@ -120,6 +126,43 @@ test.describe("Bảng điều hành — tiêu chí nghiệm thu Giai đoạn 4",
       .first()
       .click();
     await expect(page).toHaveURL(/\/dia-ban\/truong-hoc\?capHoc=\w+&namHoc=2025-2026/);
+  });
+
+  test("biểu đồ xu hướng & báo cáo theo tháng: bấm cột ra danh sách lọc theo tháng", async ({
+    page,
+  }) => {
+    await openDashboard(page, "chutich");
+    const api = await (await page.request.get("/api/dashboard")).json();
+    expect(api.operations.trend).toHaveLength(6);
+    expect(api.operations.reportMonths).toHaveLength(6);
+    const month = api.operations.trend.at(-1).key as string; // tháng hiện tại
+    const [row] = await query<{ n: number }>(
+      `SELECT count(*)::int n FROM "Task" WHERE "deletedAt" IS NULL AND flow <> 'CANCELLED'
+       AND to_char("createdAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM') = $1`,
+      [month],
+    );
+    expect(api.operations.trend.at(-1).assigned).toBe(row!.n);
+
+    // Bấm cột "Giao mới" tháng hiện tại → /cong-viec?giao=YYYY-MM, có chip lọc tháng
+    const trend = page.getByRole("region", { name: /Giao mới và hoàn thành/ });
+    // Chuỗi đầu (Giao mới), cột cuối = tháng hiện tại (cột giá trị 0 không được vẽ)
+    await trend.locator(".recharts-bar").first().locator(".recharts-bar-rectangle").last().click();
+    await expect(page).toHaveURL(new RegExp(`/cong-viec\\?giao=${month}`));
+    const [y, m] = month.split("-");
+    await expect(page.getByText(`Giao trong tháng ${m}/${y}`)).toBeVisible({ timeout: 60_000 });
+
+    // Báo cáo theo tháng: liên kết ẩn (bàn phím/trình đọc màn hình) dẫn tới /bao-cao?thang=…&trangThai=QUA_HAN
+    await page.goBack();
+    const link = page
+      .getByRole("region", { name: /Nộp báo cáo theo tháng/ })
+      .getByRole("link", { name: /^Quá hạn chưa nộp/ })
+      .first();
+    const href = await link.getAttribute("href");
+    expect(href).toMatch(/^\/bao-cao\?thang=\d{4}-\d{2}&trangThai=QUA_HAN$/);
+    await page.goto(href!);
+    await expect(page.getByText(/Hạn nộp trong tháng \d{2}\/\d{4}/)).toBeVisible({
+      timeout: 60_000,
+    });
   });
 
   test("dashboard theo vai trò: cán bộ rút gọn + Việc của tôi; người xem không có khối nhiệm vụ", async ({

@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { PeriodRow } from "@/components/reports/PeriodsTable";
-import { formatDate } from "@/lib/format";
+import { dateOnlyKey, formatDate } from "@/lib/format";
 import type { PeriodItem } from "@/server/reports/queries";
 
 /** Kỳ báo cáo → dòng bảng (dữ liệu tuần tự hoá được cho client) */
@@ -36,5 +36,6 @@ export function toPeriodRow(p: PeriodItem): PeriodRow {
     canSubmit: p.canSubmit,
     editable: p.editable,
     upcoming: p.daysLeft <= 60,
+    dueMonth: dateOnlyKey(p.dueDate).slice(0, 7),
   };
 }

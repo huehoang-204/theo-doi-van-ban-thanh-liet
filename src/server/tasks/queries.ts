@@ -82,6 +82,8 @@ export type TaskListItem = {
   progress: number;
   status: DueStatus | null;
   pendingExtension: boolean;
+  createdAt: Date;
+  completedAt: Date | null;
 };
 
 function toItem(t: ListRow, now: Date, dueSoonDays: number): TaskListItem {
@@ -99,6 +101,8 @@ function toItem(t: ListRow, now: Date, dueSoonDays: number): TaskListItem {
     progress: t.progress,
     status: taskDueStatus(t, now, dueSoonDays),
     pendingExtension: t.extensions.length > 0,
+    createdAt: t.createdAt,
+    completedAt: t.completedAt,
   };
 }
 

@@ -130,3 +130,14 @@ Người phụ trách yêu cầu bổ sung theo mẫu hệ thống văn bản đ
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Mục 4.5 vẽ bố cục 2 cột (cây trái, chi tiết phải) | **Bỏ 2 cột** theo yêu cầu: trang Văn bản chỉ có cây chiếm cả chiều rộng; bấm văn bản mở trang chi tiết riêng, có nút "← Cây văn bản" (các nhánh đang mở được giữ nguyên khi quay lại) |
 | Thêm văn bản                                      | Từ trang cây: ở lại trang cây, văn bản mới hiện trong nhánh; từ trang chi tiết ("Văn bản con"): chuyển sang văn bản mới                                                               |
+
+## L. Bảng điều hành thiết kế lại (người dùng yêu cầu 22/10/2026: "gọn, không quá nhiều nội dung, thêm biểu đồ")
+
+| Nội dung                                     | Cách xử lý hiện tại                                                                                                                                                 |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mục 7.2: 4 thẻ trạng thái công việc          | Gộp thành khối "Công việc theo trạng thái": thanh cơ cấu 100% + 4 dòng số bấm được                                                                                  |
+| Mục 7.2: bảng "Báo cáo cần nộp 14 ngày"      | Thay bằng biểu đồ "Nộp báo cáo theo tháng của hạn nộp" (đúng hạn / trễ / quá hạn / chưa đến hạn) + liên kết "Cần nộp trong 14 ngày (N)" sang trang Theo dõi báo cáo |
+| Mục 7.2: "Văn bản mới ban hành (10)"         | Bỏ khỏi Bảng điều hành — xem ở Văn bản › Mới ban hành; số liệu vẫn có trong `/api/dashboard`                                                                        |
+| Mục 7.2: bảng trường, top 5 chi bộ, bảng TDP | Bỏ; mỗi lĩnh vực còn 1 dòng tổng + 1 biểu đồ + liên kết "Danh mục"                                                                                                  |
+| Biểu đồ mới                                  | "Giao mới và hoàn thành — 6 tháng" (giao theo ngày tạo việc, hoàn thành theo ngày duyệt; không tính việc huỷ)                                                       |
+| "Cập nhật ngày …"                            | Ghi ở tiêu đề từng khối (Mục 7.1), từng thẻ để trong chú thích khi rê chuột                                                                                         |

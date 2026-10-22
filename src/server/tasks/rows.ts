@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { TaskRow } from "@/components/tasks/TasksTable";
+import { vnMonthKey } from "@/lib/dashboard";
 import { formatDate } from "@/lib/format";
 import type { TaskListItem } from "@/server/tasks/queries";
 
@@ -21,5 +22,7 @@ export function toTaskRow(t: TaskListItem): TaskRow {
     progress: t.progress,
     status: t.status,
     pendingExtension: t.pendingExtension,
+    createdMonth: vnMonthKey(t.createdAt),
+    completedMonth: t.flow === "DONE" && t.completedAt ? vnMonthKey(t.completedAt) : null,
   };
 }

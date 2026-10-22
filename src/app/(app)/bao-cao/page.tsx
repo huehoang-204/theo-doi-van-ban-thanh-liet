@@ -37,6 +37,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/bao-cao"
         requirements={requirements.map((r) => ({ value: r.id, label: r.name }))}
         initial={{
           requirement: str(params.yeuCau),
+          month: str(params.thang),
           status: str(params.trangThai),
           withinDays: str(params.trongNgay)
             ? Number(str(params.trongNgay)) || undefined
