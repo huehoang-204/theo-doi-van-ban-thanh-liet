@@ -17,9 +17,10 @@ Giao diện 100% tiếng Việt, chữ lớn (16px, có nút **A− / A+**), dù
 3. [Quy ước trạng thái theo hạn](#quy-ước-trạng-thái-theo-hạn)
 4. [Công nghệ](#công-nghệ)
 5. [Cài đặt và chạy](#cài-đặt-và-chạy)
-6. [Kiểm thử](#kiểm-thử)
-7. [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-8. [Tình trạng dự án](#tình-trạng-dự-án)
+6. [Triển khai lên web](#triển-khai-lên-web)
+7. [Kiểm thử](#kiểm-thử)
+8. [Cấu trúc thư mục](#cấu-trúc-thư-mục)
+9. [Tình trạng dự án](#tình-trạng-dự-án)
 
 ---
 
@@ -277,6 +278,16 @@ Dữ liệu mẫu gồm 9 trường, 40 tổ dân phố (~92.000 nhân khẩu), 
 | `npm run db:clear-sample`                       | Xoá toàn bộ dữ liệu mẫu                                     |
 | `npm run db:local -- start\|stop\|status\|psql` | Quản lý PostgreSQL cục bộ                                   |
 
+## Triển khai lên web
+
+Repo có sẵn [`render.yaml`](render.yaml) để đưa hệ thống lên [Render](https://render.com): một web service
+(kèm ổ đĩa lưu tệp, chạy luôn các tác vụ tự động) và một PostgreSQL 16, khu vực Singapore, HTTPS tự động,
+tự cập nhật khi đẩy mã lên nhánh `main`. Chi phí khoảng 13–14 USD/tháng.
+
+Trên Render: **New → Blueprint** → chọn repo này → nhập mật khẩu ban đầu cho `admin` và tài khoản mẫu →
+**Deploy Blueprint**. Hướng dẫn từng bước, chuyển sang dữ liệu thật, sao lưu, gắn tên miền:
+[`docs/trien-khai.md`](docs/trien-khai.md).
+
 ## Kiểm thử
 
 ```bash
@@ -303,10 +314,12 @@ Logic nghiệp vụ được viết thành hàm thuần và có unit test trư�
 │  ├─ components/       giao diện theo khu vực (dashboard, document-tree, tasks, reports, catalog…)
 │  ├─ lib/              logic nghiệp vụ thuần + phân quyền + định dạng số/ngày kiểu Việt Nam
 │  ├─ server/           truy vấn, server action (ghi dữ liệu + nhật ký), tác vụ định kỳ
-│  └─ worker/           tiến trình chạy lịch 06:30 và 00:15
+│  ├─ worker/           lịch chạy 06:30 và 00:15 (tiến trình riêng hoặc trong web khi WORKER_INLINE=1)
+│  └─ instrumentation.ts bật lịch trong tiến trình web (Render)
 ├─ tests/               unit/, integration/, e2e/
 ├─ scripts/dev/         PostgreSQL cục bộ không cần Docker
-├─ docs/                câu hỏi mở / quyết định nghiệp vụ, ảnh minh hoạ
+├─ docs/                hướng dẫn triển khai, câu hỏi mở / quyết định nghiệp vụ, ảnh minh hoạ
+├─ render.yaml          cấu hình triển khai lên Render
 ├─ he-thong-theo-doi-van-ban-phuong-thanh-liet.md   đặc tả hệ thống
 └─ CLAUDE.md            ghi chú kỹ thuật cho người phát triển
 ```
@@ -322,7 +335,7 @@ Logic nghiệp vụ được viết thành hàm thuần và có unit test trư�
 | 4         | Bảng điều hành, Trình chiếu                                                                                    | ✅ Xong (đã thiết kế lại gọn hơn, nhiều biểu đồ) |
 | 5         | Thông báo, nhắc hạn tự động, Ctrl+K, Nhật ký, Thùng rác                                                        | ✅ Xong                                          |
 | 5b        | Ban hành văn bản, xem trước Word/Excel, thảo luận                                                              | ✅ Xong                                          |
-| 6         | Hoàn thiện & triển khai: hướng dẫn sử dụng, in ấn, đóng gói production (Docker cho ứng dụng + worker), sao lưu | ⏳ Chưa làm                                      |
+| 6         | Hoàn thiện & triển khai: hướng dẫn sử dụng, in ấn, đóng gói production (Docker cho ứng dụng + worker), sao lưu | 🟡 Đã có triển khai lên Render; còn lại chưa làm |
 | 7         | Mở rộng sau dùng thử: bản đồ, email/Zalo, nhân bản chương trình, báo cáo Word tự động                          | ⏳ Chưa làm                                      |
 
 Các điểm nghiệp vụ còn chờ phường xác nhận và các quyết định đã áp dụng mặc định được ghi tại [`docs/cau-hoi-mo.md`](docs/cau-hoi-mo.md). Đặc tả đầy đủ ở [`he-thong-theo-doi-van-ban-phuong-thanh-liet.md`](he-thong-theo-doi-van-ban-phuong-thanh-liet.md).

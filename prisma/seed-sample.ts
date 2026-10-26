@@ -10,7 +10,8 @@ import { publishTitle } from "../src/lib/publish";
 import { recomputeAllTrees } from "../src/server/documents/progress";
 import { createMissingPeriods } from "../src/server/reports/periods";
 
-const SAMPLE_PASSWORD = "ThanhLiet@2026";
+// Production (Render…) đặt SEED_SAMPLE_PASSWORD để không dùng mật khẩu mặc định có trong mã nguồn
+const SAMPLE_PASSWORD = process.env.SEED_SAMPLE_PASSWORD || "ThanhLiet@2026";
 const TARGET_POPULATION = 92_000;
 
 /** mulberry32 — số giả ngẫu nhiên tái lập được */

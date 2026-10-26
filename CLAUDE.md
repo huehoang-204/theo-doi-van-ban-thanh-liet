@@ -142,7 +142,8 @@ Phiên bản pin chính xác trong `package.json` (`.npmrc` có `save-exact=true
 │  ├─ generated/prisma/   Prisma client (sinh tự động, không commit)
 │  ├─ auth.ts auth.config.ts proxy.ts
 │  ├─ server/ action.ts (withAuth) errors.ts auth/ actions/ (ghi) queries/ (đọc) excel/
-│  └─ worker/index.ts     cron 06:30 + job đêm
+│  ├─ worker/index.ts     tiến trình worker riêng; scheduler.ts lịch dùng chung
+│  ├─ instrumentation.ts  WORKER_INLINE=1 → chạy lịch trong tiến trình Next (Render)
 ├─ tests/ unit/ integration/ e2e/
 ├─ scripts/ dev/local-postgres.sh, backup.sh
 ├─ docs/ cau-hoi-mo.md, khoi-phuc.md, trien-khai.md, huong-dan-su-dung.md
@@ -226,5 +227,6 @@ curl http://localhost:3250/api/health    # {"status":"ok","db":"ok"}
       _Để giai đoạn sau_: service `worker` trong docker-compose + chạy worker không cần `tsx` (GĐ6); email/Zalo (GĐ7).
 - [x] **Giai đoạn 5b — Ban hành, xem trước Word/Excel, thảo luận** _(bổ sung theo yêu cầu, xong 21/10/2026)_: nút "Ban hành / Gửi" tới Toàn phường / đơn vị / cá nhân kèm lời gửi; thông báo "ĐƠN VỊ đã ban hành văn bản … [số]"; trang "Mới ban hành" theo ngày; người nhận xem được & tải tệp; xem trước DOCX/XLSX ngay trên trang; người nhận / đã xem / đã tải / người theo dõi; theo dõi văn bản; thảo luận có tệp đính kèm.
       _Kết quả_: 180 unit + 40 integration + 57 e2e (chạy 2 lần liền đều đạt); kiểm giao diện 1920/1366/390 không tràn/không cắt chữ. Lệch đặc tả Mục 1.4 (hệ thống tiến gần quản lý văn bản) đã được người dùng chấp thuận; ghi ở `docs/cau-hoi-mo.md` mục I.
+- [x] **Triển khai Render** _(bổ sung theo yêu cầu, 26/10/2026; người dùng chọn Render, chưa có tên miền)_: `render.yaml` (web Starter + disk 1 GB `/var/data`, Postgres 16 basic-256mb, Singapore; pre-deploy `migrate deploy && db seed`; health `/api/health`); hướng dẫn `docs/trien-khai.md`. Lịch job chạy trong tiến trình Next khi `WORKER_INLINE=1` (`src/instrumentation.ts` → `src/worker/scheduler.ts`, dùng chung với `npm run worker`): đo thử Next + worker `tsx` riêng ≈ 280 + 240 MB > 512 MB của Starter, còn chung một tiến trình ≈ 310 MB (worker bundle bằng esbuild vẫn ~215 MB — chủ yếu do Prisma client). `SEED_SAMPLE_PASSWORD` thay mật khẩu tài khoản mẫu. Build không cần CSDL. Không bật cùng lúc `WORKER_INLINE=1` và `npm run worker`.
 - [ ] **Giai đoạn 6 — Hoàn thiện & triển khai**: tour hướng dẫn; trạng thái rỗng; in ấn; e2e luồng chính; bản đóng gói production, script backup, `docs/huong-dan-su-dung.md`, `docs/trien-khai.md`.
 - [ ] **Giai đoạn 7 — Mở rộng (sau dùng thử)**: bản đồ Leaflet/OSM; email/Zalo OA; nhân bản chương trình; báo cáo Word tự động; PWA.

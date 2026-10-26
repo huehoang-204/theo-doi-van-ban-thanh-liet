@@ -1,0 +1,57 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Tạo trên Render: New → Blueprint → chọn repo này. Hướng dẫn đầy đủ: docs/trien-khai.md
+#
+# 1 web service + ổ đĩa lưu tệp tải lên. Lịch job (nhắc hạn 06:30, dọn dẹp 00:15) chạy ngay trong
+# tiến trình web (WORKER_INLINE=1, xem src/instrumentation.ts) — không cần service worker riêng.
+# 1 PostgreSQL 16 (có sẵn unaccent, pg_trgm). Khu vực Singapore — gần Việt Nam nhất.
+services:
+  - type: web
+    name: webtl-thanh-liet
+    runtime: node
+    region: singapore
+    plan: starter # gói trả phí nhỏ nhất có ổ đĩa lưu trữ; gói free không gắn được disk
+    buildCommand: npm ci --include=dev && npm run build
+    # Chạy trước mỗi lần deploy: cập nhật cấu trúc CSDL + dữ liệu lõi/tài khoản admin (chỉ tạo nếu chưa có)
+    preDeployCommand: npx prisma migrate deploy && npx prisma db seed
+    startCommand: node_modules/.bin/next start --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: uploads
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "20.19.0"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: webtl-db
+          property: connectionString
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: WORKER_INLINE
+        value: "1"
+      # Mật khẩu ban đầu của tài khoản admin — nhập khi tạo Blueprint (bắt buộc đổi ở lần đăng nhập đầu)
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      # 1 = nạp dữ liệu MẪU để xem thử. Trước khi dùng thật: đặt 0 rồi chạy `npm run db:clear-sample`
+      - key: SEED_SAMPLE
+        value: "1"
+      # Mật khẩu chung của các tài khoản mẫu (vanthu, chutich, canbo1…) — nhập khi tạo Blueprint
+      - key: SEED_SAMPLE_PASSWORD
+        sync: false
+
+databases:
+  - name: webtl-db
+    region: singapore
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+    databaseName: webtl
+    user: webtl
+    ipAllowList: [] # chỉ kết nối nội bộ từ service trên Render
