@@ -1087,7 +1087,7 @@ export async function seedSample(db: Db) {
 
   const population = residentials.reduce((s, r) => s + (r.population ?? 0), 0);
   console.log(
-    `✔ Dữ liệu mẫu: ${SAMPLE_USERS.length} người dùng (mật khẩu ${SAMPLE_PASSWORD}), ${schools.length} trường, ` +
+    `✔ Dữ liệu mẫu: ${SAMPLE_USERS.length} người dùng${process.env.SEED_SAMPLE_PASSWORD ? "" : ` (mật khẩu ${SAMPLE_PASSWORD})`}, ${schools.length} trường, ` +
       `${residentials.length} TDP (tổng ${population.toLocaleString("vi-VN")} nhân khẩu), ${partyCount} tổ chức đảng, ` +
       `${docCount} văn bản (${published} đã ban hành), 3 yêu cầu báo cáo (${report.periods + morePeriods} kỳ), ${taskCount + history} công việc (rải 6 tháng).`,
   );

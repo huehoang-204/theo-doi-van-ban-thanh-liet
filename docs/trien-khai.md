@@ -65,6 +65,42 @@ Các tài khoản mẫu (dùng `SEED_SAMPLE_PASSWORD`, lần đầu cũng phải
 `bithu`, `chutich` (lãnh đạo), `vanthu` (văn thư), `canbo1`, `canbo2` (cán bộ), `xaydungdang`,
 `totruong1` (chỉ xem) — chi tiết trong [README](../README.md#tài-khoản-dùng-thử-dữ-liệu-mẫu).
 
+### Cách khác: đã tạo web service thủ công (New → Web Service)
+
+Nếu service được tạo bằng **New → Web Service** thay vì Blueprint thì service đó chưa có CSDL và
+biến môi trường. Có hai cách xử lý:
+
+- **Khuyến nghị:** xoá service đó (**Settings → Delete Web Service**) rồi làm lại bước 2 bằng Blueprint.
+- **Hoặc cấu hình tay** (dùng được cả gói **Free** để xem thử):
+
+  1. **New → Postgres**: Name `webtl-db`, Database `webtl`, User `webtl`, **Region trùng region của
+     web service**, PostgreSQL 16, chọn gói (Free: 1 GB, **bị xoá sau 30 ngày**). Tạo xong, ở tab **Info**
+     bấm sao chép **Internal Database URL**.
+  2. Web service → **Settings**:
+     - **Build Command:** `npm install; npm run build` (giữ nguyên)
+     - **Start Command:** `npm run start:render` (tạo bảng + dữ liệu ban đầu nếu thiếu, rồi chạy web)
+     - **Health Check Path:** `/api/health`
+  3. Web service → **Environment → Add Environment Variable**:
+
+     | Biến                   | Giá trị                                                                                            |
+     | ---------------------- | -------------------------------------------------------------------------------------------------- |
+     | `DATABASE_URL`         | Internal Database URL vừa sao chép                                                                 |
+     | `AUTH_SECRET`          | bấm **Generate** để Render sinh chuỗi ngẫu nhiên                                                   |
+     | `COOKIE_SECURE`        | `true`                                                                                             |
+     | `WORKER_INLINE`        | `1`                                                                                                |
+     | `UPLOAD_DIR`           | có ổ đĩa (gói trả phí, **Disks** mount `/var/data`): `/var/data/uploads`; gói Free: `/tmp/uploads` |
+     | `SEED_ADMIN_PASSWORD`  | mật khẩu ban đầu của `admin`                                                                       |
+     | `SEED_SAMPLE`          | `1` (nạp dữ liệu mẫu) hoặc `0`                                                                     |
+     | `SEED_SAMPLE_PASSWORD` | mật khẩu chung cho tài khoản mẫu                                                                   |
+
+     **Không** thêm `NODE_ENV=production` (khi đó `npm install` bỏ qua các gói cần cho bước build).
+
+  4. **Save, rebuild, and deploy**. Lần đầu khởi động mất thêm khoảng 30 giây để tạo bảng và nạp dữ liệu.
+
+  Giới hạn của gói **Free**: tệp tải lên nằm ở `/tmp` và **mất mỗi lần khởi động lại**; ứng dụng ngủ sau
+  15 phút không có ai dùng (lần mở sau chờ khoảng 1 phút; nhắc hạn bị lỡ được chạy bù khi thức dậy);
+  không có **Shell**. Chỉ dùng để xem thử.
+
 ## Cập nhật phiên bản mới
 
 Chỉ cần đẩy mã lên nhánh `main`:
@@ -74,7 +110,7 @@ git push origin main
 ```
 
 Render tự build và triển khai lại (khoảng 3–5 phút, hệ thống gián đoạn chừng 1 phút trong lúc
-khởi động lại). Trước mỗi lần triển khai, Render tự chạy `prisma migrate deploy` để cập nhật cấu trúc
+khởi động lại). Mỗi lần khởi động, hệ thống tự chạy `prisma migrate deploy` để cập nhật cấu trúc
 CSDL. Theo dõi tiến trình ở tab **Events** và **Logs** của web service.
 
 ## Chuyển sang dùng dữ liệu thật
@@ -91,6 +127,9 @@ vào dùng thật:
    ```
 
    Lệnh xoá mọi bản ghi mẫu (đánh dấu `isSample`), giữ lại tài khoản `admin`, danh mục và cấu hình.
+   Gói Free không có Shell: chạy từ máy dev với **External Database URL** của CSDL
+   (`DATABASE_URL="<External URL>" npm run db:clear-sample`; CSDL tạo từ Blueprint chặn kết nối
+   ngoài, cần thêm IP máy dev ở **Networking → Access Control** trước).
 
 3. Đăng nhập `admin`, tạo tài khoản thật cho cán bộ ở **Quản trị → Người dùng**, nhập danh mục
    địa bàn (TDP, trường học, tổ chức đảng) bằng tệp Excel mẫu ở từng trang.
@@ -119,19 +158,22 @@ vào dùng thật:
 
 ## Xử lý sự cố
 
-| Hiện tượng                            | Cách xử lý                                                                                                         |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Deploy báo lỗi ở bước build           | Xem tab **Logs** → dòng lỗi đầu tiên; thường do mã mới chưa qua `npm run build` ở máy dev                          |
-| Deploy lỗi ở bước pre-deploy          | Lỗi cập nhật CSDL (migration). Xem log; không xoá CSDL — liên hệ người phát triển                                  |
-| Trang báo lỗi 502/503                 | Mở `/api/health`; nếu `db: unreachable` → kiểm tra `webtl-db` còn chạy (tab **Info**)                              |
-| Không có thông báo nhắc hạn buổi sáng | Logs của web service, tìm dòng `[worker …]`. Trang **Quản trị → Thùng rác** hiển thị lần chạy gần nhất của các job |
-| Hết dung lượng ổ tệp                  | Web service → **Disks** → tăng dung lượng (chỉ tăng được, không giảm)                                              |
+| Hiện tượng                                   | Cách xử lý                                                                                                         |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Deploy báo lỗi ở bước build                  | Xem tab **Logs** → dòng lỗi đầu tiên; thường do mã mới chưa qua `npm run build` ở máy dev                          |
+| Khởi động lỗi ở `prisma migrate deploy`      | Lỗi cập nhật CSDL (migration). Xem log; không xoá CSDL — liên hệ người phát triển                                  |
+| `MissingSecret` / `Chưa cấu hình UPLOAD_DIR` | Thiếu biến môi trường — xem bảng biến ở mục "Cách khác" phía trên                                                  |
+| `Continuing to scan for open port`           | Ứng dụng chưa nghe ở cổng `PORT`: Start Command phải là `npm run start:render` (hoặc `npm start`)                  |
+| Trang báo lỗi 502/503                        | Mở `/api/health`; nếu `db: unreachable` → kiểm tra `webtl-db` còn chạy (tab **Info**)                              |
+| Không có thông báo nhắc hạn buổi sáng        | Logs của web service, tìm dòng `[worker …]`. Trang **Quản trị → Thùng rác** hiển thị lần chạy gần nhất của các job |
+| Hết dung lượng ổ tệp                         | Web service → **Disks** → tăng dung lượng (chỉ tăng được, không giảm)                                              |
 
 ## Ghi chú kỹ thuật
 
 - `render.yaml`: build `npm ci --include=dev && npm run build` (cần devDependencies: Prisma CLI,
-  `tsx` cho seed, Tailwind); pre-deploy `prisma migrate deploy && prisma db seed` (seed chỉ tạo phần còn
-  thiếu, không ghi đè); start `next start --port $PORT`; health check `/api/health`.
+  `tsx` cho seed, Tailwind; `build` tự chạy `prisma generate`, không cần CSDL); start
+  `npm run start:render` = `prisma migrate deploy && prisma db seed && next start --port $PORT` (seed
+  chỉ tạo phần còn thiếu, không ghi đè); health check `/api/health`. Node 20 theo `.node-version`.
 - Tác vụ định kỳ chạy **trong tiến trình web** khi `WORKER_INLINE=1` (`src/instrumentation.ts` →
   `src/worker/scheduler.ts`), dùng chung Prisma client và ổ đĩa tệp. Đo thử: một tiến trình ~300 MB
   RAM, còn chạy worker riêng thì cần thêm ~200 MB — vượt 512 MB của gói Starter. Khi khởi động sau

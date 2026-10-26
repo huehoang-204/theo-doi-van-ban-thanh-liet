@@ -11,9 +11,8 @@ services:
     region: singapore
     plan: starter # gói trả phí nhỏ nhất có ổ đĩa lưu trữ; gói free không gắn được disk
     buildCommand: npm ci --include=dev && npm run build
-    # Chạy trước mỗi lần deploy: cập nhật cấu trúc CSDL + dữ liệu lõi/tài khoản admin (chỉ tạo nếu chưa có)
-    preDeployCommand: npx prisma migrate deploy && npx prisma db seed
-    startCommand: node_modules/.bin/next start --port $PORT
+    # Mỗi lần khởi động: cập nhật cấu trúc CSDL + dữ liệu lõi/tài khoản admin (chỉ tạo phần còn thiếu) rồi chạy web
+    startCommand: npm run start:render
     healthCheckPath: /api/health
     autoDeploy: true
     disk:
@@ -21,8 +20,6 @@ services:
       mountPath: /var/data
       sizeGB: 1
     envVars:
-      - key: NODE_VERSION
-        value: "20.19.0"
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
