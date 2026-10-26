@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev --port 3250",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start --port 3250",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
